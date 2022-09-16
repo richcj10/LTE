@@ -6,7 +6,7 @@
 
 void ConfigIO(){
     Serial.begin(115200);
-    Wire.begin(26,27);
+    Wire.begin(27,26);
 }
 
 char Startup(){

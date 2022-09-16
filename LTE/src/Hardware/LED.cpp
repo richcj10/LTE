@@ -3,7 +3,7 @@
 
 #define NUM_LEDS 1
 
-#define DATA_PIN 3
+#define DATA_PIN 21
 
 // Define the array of leds
 CRGB leds[NUM_LEDS];
