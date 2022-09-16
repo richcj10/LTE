@@ -1,12 +1,25 @@
 #include "Functions.h"
 #include <Arduino.h>
+#include <WiFi.h>
 #include <Wire.h>
 #include "Hardware/LED.h"
 #include "Hardware/FuelGauge.h"
+#include "Define.h"
+#include "soc/soc.h"
+#include "soc/rtc_cntl_reg.h"
+
+String UN = "";
+
+const char *soft_ap_password = "LTEAP";
+const char* wifi_network_ssid = "Lights.Camera.Action";
+const char* wifi_network_password =  "RR58fa!8";
 
 void ConfigIO(){
+    WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);
+    pinMode(DEBUG_LED,OUTPUT);
     Serial.begin(115200);
     Wire.begin(27,26);
+    UniqueName();
 }
 
 char Startup(){
@@ -14,6 +27,34 @@ char Startup(){
     LEDsetup();
     FGsetup(1);
     return 1;
+}
+
+void UniqueName(){
+  String Mac = WiFi.macAddress();
+  //Serial.println(Mac);
+  int Len = Mac.length();
+  UN = "ESPPLC-LTE-";
+  UN = UN + Mac.charAt(Len - 5);
+  UN = UN + Mac.charAt(Len - 4);
+  UN = UN + Mac.charAt(Len - 3);
+  UN = UN + Mac.charAt(Len - 2);
+  UN = UN + Mac.charAt(Len-1);
+  Serial.println();
+  Serial.println(UN);
+}
+
+void WiFiSetup(){	
+    WiFi.mode(WIFI_MODE_STA);
+    WiFi.config(INADDR_NONE, INADDR_NONE, INADDR_NONE, INADDR_NONE);
+    WiFi.setHostname(UN.c_str()); //define hostname
+    //WiFi.softAP(UN.c_str(), soft_ap_password);
+    WiFi.begin(wifi_network_ssid, wifi_network_password);
+    while (WiFi.status() != WL_CONNECTED) {
+        delay(200);
+        Serial.println(".");
+    }
+    Serial.print("IP address: ");
+    Serial.println(WiFi.localIP());
 }
 
 void RunLoop(){

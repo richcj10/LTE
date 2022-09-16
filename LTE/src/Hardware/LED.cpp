@@ -1,9 +1,10 @@
 #include "LED.h"
 #include <FastLED.h>
+#include "Define.h"
 
-#define NUM_LEDS 1
+char Brightness = 50;
 
-#define DATA_PIN 21
+char color = 0;
 
 // Define the array of leds
 CRGB leds[NUM_LEDS];
@@ -12,13 +13,21 @@ void LEDsetup() {
     FastLED.addLeds<NEOPIXEL, DATA_PIN>(leds, NUM_LEDS);  // GRB ordering is assumed
 }
 
-void LEDloop() {
-  // Turn the LED on, then pause
-  leds[0] = CRGB::Red;
-  FastLED.show();
-  delay(500);
-  // Now turn the LED off, then pause
-  leds[0] = CRGB::Black;
-  FastLED.show();
-  delay(500);
+void LEDUpdate(char Value) {
+  color = Value;
+  FastLED.showColor(CHSV(color, 255, Brightness)); 
+}
+
+void LEDBrightness(char Value) {
+  Brightness = Value;
+  FastLED.showColor(CHSV(color, 255, Brightness)); 
+}
+
+void DebugLED(char value){
+  if(value == 1){
+    digitalWrite(DEBUG_LED, HIGH);
+  }
+  else{
+    digitalWrite(DEBUG_LED, LOW);
+  }
 }

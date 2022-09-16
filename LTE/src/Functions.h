@@ -4,5 +4,7 @@
 char Startup();
 void RunLoop();
 void DebugPrint();
+void WiFiSetup();
+void UniqueName();
 
 #endif 

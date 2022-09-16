@@ -4,12 +4,17 @@
 
 void setup() {
   Startup();
+  WiFiSetup();
+  LEDUpdate(50);
 }
 
-void loop() {
+void loop(){
   RunLoop();
   delay(1000);
+  DebugLED(1);
+  delay(1000);
+  DebugLED(0);
   DebugPrint();
-  LEDloop();
+  //LEDloop();
   // put your main code here, to run repeatedly:
 }

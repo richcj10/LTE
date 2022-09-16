@@ -2,6 +2,8 @@
 #define  LED_H
 
 void LEDsetup();
-void LEDloop();
+void LEDUpdate(char Value);
+void LEDBrightness(char Value);
+void DebugLED(char value);
 
 #endif 
