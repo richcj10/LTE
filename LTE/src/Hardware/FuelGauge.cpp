@@ -9,7 +9,7 @@ SFE_MAX1704X lipo(MAX1704X_MAX17048); // Create a MAX17048
 float voltage = 0; // Variable to keep track of LiPo voltage
 float soc = 0; // Variable to keep track of LiPo state-of-charge (SOC)
 bool alert; // Variable to keep track of whether alert has been triggered
-char Error = 0;
+char FGerror = 0;
 
 void FGsetup(char Debug){
     if(Debug){
@@ -18,7 +18,7 @@ void FGsetup(char Debug){
     // Set up the MAX17044 LiPo fuel gauge:
     if (lipo.begin() == false){
         Serial.println(F("MAX17044 not detected. Please check wiring. Freezing."));
-        Error = 1;
+        FGerror = 1;
     }
 
 	// Quick start restarts the MAX17044 in hopes of getting a more accurate
@@ -31,26 +31,36 @@ void FGsetup(char Debug){
 }
 
 void FGloop(){
-	// lipo.getVoltage() returns a voltage value (e.g. 7.86)
-	voltage = lipo.getVoltage();
-	// lipo.getSOC() returns the estimated state of charge (e.g. 79%)
-	soc = lipo.getSOC();
-	// lipo.getAlert() returns a 0 or 1 (0=alert not triggered)
-	alert = lipo.getAlert();
+	if(FGerror == 0){
+		voltage = lipo.getVoltage();
+		soc = lipo.getSOC();
+		alert = lipo.getAlert();
+	}
+	else{
+		voltage = 0;
+		soc = 0;
+		alert = 0;
+	}
 }
 
 void FGDisplay(){
-	Serial.print("Voltage: ");
-	Serial.print(voltage);  // Print the battery voltage
-	Serial.println(" V");
+	if(FGerror == 0){
+		Serial.print("Voltage: ");
+		Serial.print(voltage);  // Print the battery voltage
+		Serial.println(" V");
 
-	Serial.print("Percentage: ");
-	Serial.print(soc); // Print the battery state of charge
-	Serial.println(" %");
+		Serial.print("Percentage: ");
+		Serial.print(soc); // Print the battery state of charge
+		Serial.println(" %");
 
-    Serial.print("Alert: ");
-    Serial.println(alert);
-    Serial.println();
+		Serial.print("Alert: ");
+		Serial.println(alert);
+		Serial.println();
+	}
+	else{
+		Serial.print("No FG");
+		Serial.println();
+	}
 }
 
 float GetCellV(){
@@ -63,4 +73,8 @@ float GetCellSoC(){
 
 bool GetCellAlert(){
 	return alert;
+}
+
+char GetFGerror(){
+	return FGerror;
 }

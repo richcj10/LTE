@@ -4,6 +4,7 @@
 #include <Wire.h>
 #include "Hardware/LED.h"
 #include "Hardware/FuelGauge.h"
+#include "Hardware/cellular.h"
 #include "Define.h"
 #include "soc/soc.h"
 #include "soc/rtc_cntl_reg.h"
@@ -16,6 +17,9 @@ const char *soft_ap_password = "LTEAP";
 const char* ssid = "Lights.Camera.Action";
 const char* password = "RR58fa!8";
 
+unsigned long UpdatePreviousMillis = 0;  
+unsigned long DebugPreviousMillis = 0;
+
 void ConfigIO(){
     //WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);
     pinMode(DEBUG_LED,OUTPUT);
@@ -27,7 +31,7 @@ void ConfigIO(){
 char Startup(){
     ConfigIO();
     LEDsetup();
-    FGsetup(1);
+    FGsetup(0);
     return 1;
 }
 
@@ -57,9 +61,18 @@ void WiFiSetup(){
 }
 
 void RunLoop(){
+  if (millis() - UpdatePreviousMillis >= UPDATE_LOOP) {
+    UpdatePreviousMillis = millis();
+    DebugLEDToggle();
     FGloop();
+    NetworkStatusUpdate();
+  }
 }
 
 void DebugPrint(){
+  if (millis() - DebugPreviousMillis >= DEBUG_LOOP) {
+    DebugPreviousMillis = millis();
     FGDisplay();
+    CellularDisplay();
+  }
 }
