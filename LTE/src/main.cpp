@@ -1,11 +1,24 @@
 #include <Arduino.h>
 #include "Functions.h"
 #include "Hardware/LED.h"
+#include "Hardware/cellular.h"
+
+
+unsigned long previousMillis = 0;        // will store last time LED was updated
+
+// constants won't change:
+const long interval = 30000;           // interval at which to blink (milliseconds)
+
 
 void setup() {
   Startup();
-  WiFiSetup();
+  delay(1000);
+  Serial.print("Wifi");
+  //WiFiSetup();
   LEDUpdate(50);
+  LTEsetup();
+  RunLoop();
+  LTEloop();
 }
 
 void loop(){
@@ -15,6 +28,15 @@ void loop(){
   delay(1000);
   DebugLED(0);
   DebugPrint();
+  unsigned long currentMillis = millis();
+
+  if (currentMillis - previousMillis >= interval) {
+    // save the last time you blinked the LED
+    previousMillis = currentMillis;
+
+      LTEloop();
+
+  }
   //LEDloop();
   // put your main code here, to run repeatedly:
 }

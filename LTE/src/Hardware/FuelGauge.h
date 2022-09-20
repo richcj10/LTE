@@ -4,5 +4,8 @@
 void FGsetup(char Debug);
 void FGloop();
 void FGDisplay();
+float GetCellV();
+float GetCellSoC();
+bool GetCellAlert();
 
 #endif 

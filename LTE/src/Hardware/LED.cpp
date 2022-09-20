@@ -31,3 +31,7 @@ void DebugLED(char value){
     digitalWrite(DEBUG_LED, LOW);
   }
 }
+
+char LEDGetValue(){
+  return color;
+}
