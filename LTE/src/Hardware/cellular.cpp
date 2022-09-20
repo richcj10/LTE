@@ -50,6 +50,9 @@ void LTEsetup() {
 long i = 0;
 char counter = 0;
 char msg[200];
+char LTEerror = 0;
+char LTEStatus = 0;
+bool LTEConnected = 0;
   
 void LTEloop() {
   i++;
@@ -76,54 +79,36 @@ void NetworkSetup(){
   //Serial1.begin(38400);
   if (! fona.begin(Serial1)) {
     Serial.println(F("Couldn't find FONA"));
-    while (1); // Don't proceed if it couldn't find the device
+    LTEerror = 1;
   }
 
   type = fona.type();
   Serial.println(F("FONA is OK"));
   Serial.print(F("Found "));
-//  switch (type) {
-//    case SIM800L:
-//      Serial.println(F("SIM800L")); break;
-//    case SIM800H:
-//      Serial.println(F("SIM800H")); break;
-//    case SIM808_V1:
-//      Serial.println(F("SIM808 (v1)")); break;
-//    case SIM808_V2:
-//      Serial.println(F("SIM808 (v2)")); break;
-//    case SIM5320A:
-//      Serial.println(F("SIM5320A (American)")); break;
-//    case SIM5320E:
-//      Serial.println(F("SIM5320E (European)")); break;
-//    case SIM7000:
-//      Serial.println(F("SIM7000")); break;
-//    case SIM7070:
-//      Serial.println(F("SIM7070")); break;
-//    case SIM7500:
-//      Serial.println(F("SIM7500")); break;
-//    case SIM7600:
-//      Serial.println(F("SIM7600")); break;
-//    default:
-//      Serial.println(F("???")); break;
-//  }
-
-  // Print module IMEI number.
-//  uint8_t imeiLen = fona.getIMEI(imei);
-//  if (imeiLen > 0) {
-//    Serial.print("Module IMEI: "); Serial.println(imei);
-//  }
-  fona.setNetworkSettings(F("hologram")); // For Hologram SIM card
-  delay(5000);
-  fona.enableGPRS(true);
-  if (!fona.wirelessConnStatus()) {
-    while (!fona.openWirelessConnection(true)) {
-      Serial.println(F("Failed to enable connection, retrying..."));
-      delay(2000); // Retry every 2s
+  if(LTEerror == 0){
+    fona.setNetworkSettings(F("hologram")); // For Hologram SIM card
+    delay(1000);
+    fona.enableGPRS(true);
+    if (!fona.wirelessConnStatus()) {
+      while (!fona.openWirelessConnection(true)) {
+        Serial.println(F("Failed to enable connection, retrying..."));
+        delay(1000); // Retry every 2s
+        counter++;
+        if(counter > 5){
+          NetworkStop();
+          break;
+        }
+      }
+      Serial.println(F("Enabled data!"));
     }
-    Serial.println(F("Enabled data!"));
+    delay(100);
+    fona.wirelessConnStatus();
   }
-  delay(100);
-  fona.wirelessConnStatus();
+}
+
+void NetworkStatusUpdate(){
+  LTEConnected = fona.wirelessConnStatus();
+  LTEStatus = fona.GPRSstate();
 }
 
 void NetworkStop(){
@@ -133,16 +118,16 @@ void NetworkStop(){
 }
 
 void NetworkTest(){
-  uint8_t n = fona.GPRSstate();
+  LTEStatus = fona.GPRSstate();
   Serial.print(F("Network status "));
-  Serial.print(n);
+  Serial.print(LTEStatus);
   Serial.print(F(": "));
-  if (n == 0) Serial.println(F("Not registered"));
-  if (n == 1) Serial.println(F("Registered (home)"));
-  if (n == 2) Serial.println(F("Not registered (searching)"));
-  if (n == 3) Serial.println(F("Denied"));
-  if (n == 4) Serial.println(F("Unknown"));
-  if (n == 5) Serial.println(F("Registered roaming"));
+  if (LTEStatus == 0) Serial.println(F("Not registered"));
+  if (LTEStatus == 1) Serial.println(F("Registered (home)"));
+  if (LTEStatus == 2) Serial.println(F("Not registered (searching)"));
+  if (LTEStatus == 3) Serial.println(F("Denied"));
+  if (LTEStatus == 4) Serial.println(F("Unknown"));
+  if (LTEStatus == 5) Serial.println(F("Registered roaming"));
 }
 
 void Pushover(const char* Title, const char* Message){
@@ -206,4 +191,17 @@ String urlencode(String str){
     }
     return encodedString;
     
+}
+
+void CellularDisplay(){
+  Serial.println("LTE Debug:");
+  Serial.print("LTE Connection: ");
+  if (LTEStatus == 0) Serial.println(F("Not registered"));
+  else if (LTEStatus == 1) Serial.println(F("Registered (home)"));
+  else if (LTEStatus == 2) Serial.println(F("Not registered (searching)"));
+  else if (LTEStatus == 3) Serial.println(F("Denied"));
+  else if (LTEStatus == 4) Serial.println(F("Unknown"));
+  else if (LTEStatus == 5) Serial.println(F("Registered roaming"));
+  else Serial.println(F("N/A"));
+  Serial.print("LTE Status: ");Serial.println(LTEConnected);
 }

@@ -7,5 +7,6 @@ void FGDisplay();
 float GetCellV();
 float GetCellSoC();
 bool GetCellAlert();
+char GetFGerror();
 
 #endif 
