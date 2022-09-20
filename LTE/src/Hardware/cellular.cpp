@@ -1,7 +1,10 @@
 
 #include "Adafruit_FONA.h"
+#include <Arduino.h>
 #include "cellular.h"
 #include "Define.h"
+#include "FuelGauge.h"
+#include "LED.h"
 
 
 //#define T_ALERT 12 // Connect with solder jumper
@@ -26,6 +29,8 @@ String urlencode(String str);
 int freeRam();
 void NetworkStop();
 
+#define RXD2 17
+#define TXD2 16
 
 void LTEsetup() {
   //  while (!Serial);
@@ -35,8 +40,6 @@ void LTEsetup() {
   digitalWrite(FONA_RST, LOW);
   delay(1000);
   digitalWrite(FONA_RST, HIGH);
-
-  Serial.begin(9600);
   
   NetworkSetup();
 
@@ -51,8 +54,12 @@ char msg[200];
 void LTEloop() {
   i++;
   //NetworkSetup();
-  sprintf(msg, "This is a Test = %i",i);
-  Pushover("Hi Mike",msg);
+  char ExistingColor = LEDGetValue();
+
+  LEDUpdate(150);
+  sprintf(msg, "Voltage = %f SoC = %f",GetCellV(),GetCellSoC());
+  Pushsafer("Battery Status",msg);
+  LEDUpdate(ExistingColor);
 }
 
 void NetworkSetup(){
@@ -61,12 +68,12 @@ void NetworkSetup(){
   Serial.println(F("Initializing....(May take several seconds)"));
 
   // Software serial:
-  Serial1.begin(115200); // Default SIM7000 shield baud rate
+  Serial1.begin(115200, SERIAL_8N1, RXD2, TXD2); // Default SIM7000 shield baud rate
 
-  Serial.println(F("Configuring to 38400 baud"));
-  Serial1.println("AT+IPR=38400"); // Set baud rate
-  delay(100); // Short pause to let the command run
-  Serial1.begin(38400);
+  //Serial.println(F("Configuring to 38400 baud"));
+  //Serial1.println("AT+IPR=38400"); // Set baud rate
+  //delay(100); // Short pause to let the command run
+  //Serial1.begin(38400);
   if (! fona.begin(Serial1)) {
     Serial.println(F("Couldn't find FONA"));
     while (1); // Don't proceed if it couldn't find the device
@@ -144,26 +151,27 @@ void Pushover(const char* Title, const char* Message){
   sprintf(URL, "api.pushover.net");
   fona.HTTP_ssl(true);
   fona.HTTP_connect(URL);
-  int SizeOfArray = sprintf(BODY, "token=***************&user=****************&device=droid4&title=%s&message=%s",urlencode(Title).c_str(),urlencode(Message).c_str());
+  int SizeOfArray = sprintf(BODY, "token=ax54xhwax8om6q4hwtjxfa7qatanjc&user=ufi8weo5covwibzqg1a6iuzhpj1r3q&title=%s&message=%s",urlencode(Title).c_str(),urlencode(Message).c_str());
   Serial.print("Array Body = ");Serial.println(SizeOfArray);
+  Serial.print("Array Body = ");Serial.println(BODY);
   fona.HTTP_addHeader("Host","api.pushover.net",16);
-  fona.HTTP_addHeader("Content-Type","application/x-www-form-urlencoded",33);
-  //fona.HTTP_addHeader("Content-Length","140",3);
-  fona.HTTP_POST("/1/messages.json",BODY,SizeOfArray);
+  fona.HTTP_addHeader("Content-Type","application/json",16);
+  fona.HTTP_addHeader("Content-Length","115",3);
+  fona.HTTP_POST("/1/messages.json",BODY,SizeOfArray,4000);
 }
 
 void Pushsafer(const char* Title, const char* Message){
   char URL[200];
   char BODY[200];
   sprintf(URL, "pushsafer.com");
-  fona.HTTP_ssl(true);
+  //fona.HTTP_ssl(true);
   fona.HTTP_connect(URL);
-  int SizeOfArray = sprintf(BODY, "k=*************&t=%s&m=%s",urlencode(Title).c_str(),urlencode(Message).c_str());
+  int SizeOfArray = sprintf(BODY, "k=2HKtWV9uyhxpSJ1Eigw1&t=%s&m=%s",urlencode(Title).c_str(),urlencode(Message).c_str());
   Serial.print("Array Body = ");Serial.println(SizeOfArray);
-  //fona.HTTP_addHeader("Host","api.pushover.net",16);
+  Serial.print("Array Body = ");Serial.println(BODY);
   fona.HTTP_addHeader("Content-Type","application/x-www-form-urlencoded",33);
   //fona.HTTP_addHeader("Content-Length","140",3);
-  fona.HTTP_POST("/api",BODY,SizeOfArray);
+  fona.HTTP_POST("/api",BODY,SizeOfArray,4000);
 }
 
 String urlencode(String str){

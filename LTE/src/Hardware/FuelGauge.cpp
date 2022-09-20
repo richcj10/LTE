@@ -6,8 +6,8 @@
 
 SFE_MAX1704X lipo(MAX1704X_MAX17048); // Create a MAX17048
 
-double voltage = 0; // Variable to keep track of LiPo voltage
-double soc = 0; // Variable to keep track of LiPo state-of-charge (SOC)
+float voltage = 0; // Variable to keep track of LiPo voltage
+float soc = 0; // Variable to keep track of LiPo state-of-charge (SOC)
 bool alert; // Variable to keep track of whether alert has been triggered
 char Error = 0;
 
@@ -51,4 +51,16 @@ void FGDisplay(){
     Serial.print("Alert: ");
     Serial.println(alert);
     Serial.println();
+}
+
+float GetCellV(){
+	return voltage;
+}
+
+float GetCellSoC(){
+	return soc;
+}
+
+bool GetCellAlert(){
+	return alert;
 }

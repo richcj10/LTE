@@ -5,5 +5,7 @@ void LEDsetup();
 void LEDUpdate(char Value);
 void LEDBrightness(char Value);
 void DebugLED(char value);
+char LEDGetValue();
+
 
 #endif 

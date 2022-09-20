@@ -11,11 +11,13 @@
 String UN = "";
 
 const char *soft_ap_password = "LTEAP";
-const char* wifi_network_ssid = "Lights.Camera.Action";
-const char* wifi_network_password =  "RR58fa!8";
+//const char* wifi_network_ssid = "Lights.Camera.Action";
+//const char* wifi_network_password =  "RR58fa!8";
+const char* ssid = "Lights.Camera.Action";
+const char* password = "RR58fa!8";
 
 void ConfigIO(){
-    WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);
+    //WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);
     pinMode(DEBUG_LED,OUTPUT);
     Serial.begin(115200);
     Wire.begin(27,26);
@@ -43,18 +45,15 @@ void UniqueName(){
   Serial.println(UN);
 }
 
-void WiFiSetup(){	
-    WiFi.mode(WIFI_MODE_STA);
-    WiFi.config(INADDR_NONE, INADDR_NONE, INADDR_NONE, INADDR_NONE);
-    WiFi.setHostname(UN.c_str()); //define hostname
-    //WiFi.softAP(UN.c_str(), soft_ap_password);
-    WiFi.begin(wifi_network_ssid, wifi_network_password);
-    while (WiFi.status() != WL_CONNECTED) {
-        delay(200);
-        Serial.println(".");
-    }
-    Serial.print("IP address: ");
-    Serial.println(WiFi.localIP());
+void WiFiSetup(){
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, password);
+  Serial.print("Connecting to WiFi ..");
+  while (WiFi.status() != WL_CONNECTED) {
+    Serial.print('.');
+    delay(1000);
+  }
+  Serial.println(WiFi.localIP());
 }
 
 void RunLoop(){
