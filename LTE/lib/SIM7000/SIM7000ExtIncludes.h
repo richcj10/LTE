@@ -25,7 +25,7 @@
 #define ADAFRUIT_FONA_LIBRARY_SRC_INCLUDES_FONAEXTINCLUDES_H_
 
 
-#include "FONAConfig.h"
+#include "SIM7000Config.h"
 // include any system-wide includes required here
 
 
