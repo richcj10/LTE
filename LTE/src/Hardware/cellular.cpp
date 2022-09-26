@@ -1,5 +1,5 @@
 
-#include "Adafruit_FONA.h"
+#include <Adafruit_FONA.h>
 #include <Arduino.h>
 #include "cellular.h"
 #include "Define.h"
@@ -23,6 +23,8 @@ Adafruit_FONA_LTE fona = Adafruit_FONA_LTE();
 uint8_t readline(char *buff, uint8_t maxbuff, uint16_t timeout = 0);
 uint8_t type;
 char imei[16] = {0}; // MUST use a 16 character buffer for IMEI!
+char URL[200];
+char BODY[200];
 
 void NetworkTest();
 String urlencode(String str);
@@ -58,7 +60,7 @@ void LTEloop() {
 
   LEDUpdate(150);
   sprintf(msg, "Voltage = %f SoC = %f",GetCellV(),GetCellSoC());
-  Pushsafer("Battery Status",msg);
+  Pushover("Battery Status",msg);
   LEDUpdate(ExistingColor);
 }
 
@@ -146,30 +148,23 @@ void NetworkTest(){
 }
 
 void Pushover(const char* Title, const char* Message){
-  char URL[200];
-  char BODY[200];
   sprintf(URL, "api.pushover.net");
   fona.HTTP_ssl(true);
   fona.HTTP_connect(URL);
   int SizeOfArray = sprintf(BODY, "token=ax54xhwax8om6q4hwtjxfa7qatanjc&user=ufi8weo5covwibzqg1a6iuzhpj1r3q&title=%s&message=%s",urlencode(Title).c_str(),urlencode(Message).c_str());
   Serial.print("Array Body = ");Serial.println(SizeOfArray);
   Serial.print("Array Body = ");Serial.println(BODY);
-  fona.HTTP_addHeader("Host","api.pushover.net",16);
-  fona.HTTP_addHeader("Content-Type","application/json",16);
-  fona.HTTP_addHeader("Content-Length","115",3);
   fona.HTTP_POST("/1/messages.json",BODY,SizeOfArray,4000);
 }
 
 void Pushsafer(const char* Title, const char* Message){
-  char URL[200];
-  char BODY[200];
   sprintf(URL, "pushsafer.com");
-  //fona.HTTP_ssl(true);
+  fona.HTTP_ssl(true);
   fona.HTTP_connect(URL);
   int SizeOfArray = sprintf(BODY, "k=2HKtWV9uyhxpSJ1Eigw1&t=%s&m=%s",urlencode(Title).c_str(),urlencode(Message).c_str());
   Serial.print("Array Body = ");Serial.println(SizeOfArray);
   Serial.print("Array Body = ");Serial.println(BODY);
-  fona.HTTP_addHeader("Content-Type","application/x-www-form-urlencoded",33);
+  //fona.HTTP_addHeader("Content-Type","application/x-www-form-urlencoded",33);
   //fona.HTTP_addHeader("Content-Length","140",3);
   fona.HTTP_POST("/api",BODY,SizeOfArray,4000);
 }
