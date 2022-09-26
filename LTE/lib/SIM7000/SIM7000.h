@@ -17,11 +17,11 @@
   Written by Limor Fried/Ladyada for Adafruit Industries.
   BSD license, all text above must be included in any redistribution
  ****************************************************/
-#ifndef ADAFRUIT_FONA_H
-#define ADAFRUIT_FONA_H
+#ifndef SIM7000_H
+#define SIM7000_H
 
-#include "FONAConfig.h"
-#include "FONAExtIncludes.h"
+#include "SIM7000Config.h"
+#include "SIM7000ExtIncludes.h"
 #include "platform/FONAPlatform.h"
 
 
@@ -323,7 +323,7 @@ class Adafruit_FONA : public FONAStreamType {
   FONAStreamType *mySerial;
 };
 
-class Adafruit_FONA_3G : public Adafruit_FONA {
+/* class Adafruit_FONA_3G : public Adafruit_FONA {
 
  public:
   Adafruit_FONA_3G (int8_t r) : Adafruit_FONA(r) { _type = SIM5320A; }
@@ -344,7 +344,7 @@ class Adafruit_FONA_3G : public Adafruit_FONA {
     boolean sendParseReply(FONAFlashStringPtr tosend,
          FONAFlashStringPtr toreply,
          float *f, char divider = ',', uint8_t index=0);
-};
+}; */
 
 class Adafruit_FONA_LTE : public Adafruit_FONA {
 

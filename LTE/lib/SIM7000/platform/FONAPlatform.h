@@ -25,7 +25,7 @@
 #ifndef ADAFRUIT_FONA_LIBRARY_SRC_INCLUDES_PLATFORM_FONAPLATFORM_H_
 #define ADAFRUIT_FONA_LIBRARY_SRC_INCLUDES_PLATFORM_FONAPLATFORM_H_
 
-#include "../FONAConfig.h"
+#include "../SIM7000Config.h"
 
 // only "standard" config supported in this release -- namely AVR-based arduino type affairs
 #include "FONAPlatStd.h"

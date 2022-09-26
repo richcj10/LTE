@@ -15,7 +15,7 @@
   BSD license, all text above must be included in any redistribution
  ****************************************************/
 
-#include "Adafruit_FONA.h"
+#include "SIM7000.h"
 
 #ifdef SSL_FONA
   char *server_CA_FONA;
@@ -176,15 +176,6 @@ boolean Adafruit_FONA::powerDown(void) {
 
   return true;
 }
-
-/* powers down the SIM5320 */
-boolean Adafruit_FONA_3G::powerDown(void) {
-  if (! sendCheckReply(F("AT+CPOF"), ok_reply))
-    return false;
-
-  return true;
-}
-
 
 /* returns the percentage charge of battery as reported by sim800 */
 boolean Adafruit_FONA::getBattPercent(uint16_t *p) {
@@ -424,13 +415,6 @@ boolean Adafruit_FONA::playToolkitTone(uint8_t t, uint16_t len) {
   return sendCheckReply(F("AT+STTONE=1,"), t, len, ok_reply);
 }
 
-boolean Adafruit_FONA_3G::playToolkitTone(uint8_t t, uint16_t len) {
-  if (! sendCheckReply(F("AT+CPTONE="), t, ok_reply))
-    return false;
-  delay(len);
-  return sendCheckReply(F("AT+CPTONE=0"), ok_reply);
-}
-
 boolean Adafruit_FONA::setMicVolume(uint8_t a, uint8_t level) {
   // For SIM800, 0 is main audio channel, 1 is aux, 2 is main audio channel (hands-free), 3 is aux channel (hands-free)
   if (a > 3) return false;
@@ -539,12 +523,6 @@ boolean Adafruit_FONA::hangUp(void) {
   return sendCheckReply(F("ATH0"), ok_reply);
 }
 
-boolean Adafruit_FONA_3G::hangUp(void) {
-  getReply(F("ATH"));
-
-  return (prog_char_strstr(replybuffer, (prog_char *)F("VOICE CALL: END")) != 0);
-}
-
 boolean Adafruit_FONA_LTE::hangUp(void) {
   // return sendCheckReply(F("ATH"), ok_reply); // For SIM7500 this only works when AT+CVHU=0
   return sendCheckReply(F("AT+CHUP"), ok_reply);
@@ -553,11 +531,6 @@ boolean Adafruit_FONA_LTE::hangUp(void) {
 boolean Adafruit_FONA::pickUp(void) {
   return sendCheckReply(F("ATA"), ok_reply);
 }
-
-boolean Adafruit_FONA_3G::pickUp(void) {
-  return sendCheckReply(F("ATA"), F("VOICE CALL: BEGIN"));
-}
-
 
 void Adafruit_FONA::onIncomingCall() {
 
@@ -813,23 +786,6 @@ boolean Adafruit_FONA::sendUSSD(char *ussdmsg, char *ussdbuff, uint16_t maxlen, 
   return true;
 }
 
-
-/********* TIME **********************************************************/
-
-/*
-boolean Adafruit_FONA::enableNetworkTimeSync(boolean onoff) {
-  if (onoff) {
-    if (! sendCheckReply(F("AT+CLTS=1"), ok_reply))
-      return false;
-  } else {
-    if (! sendCheckReply(F("AT+CLTS=0"), ok_reply))
-      return false;
-  }
-  flushInput(); // eat any 'Unsolicted Result Code'
-  return true;
-}
-*/
-
 boolean Adafruit_FONA::enableNTPTimeSync(boolean onoff, FONAFlashStringPtr ntpserver) {
   if (onoff) {
     if (! sendCheckReply(F("AT+CNTPCID=1"), ok_reply))
@@ -963,25 +919,6 @@ boolean Adafruit_FONA::enableGPS(boolean onoff) {
   }
   return true;
 }
-
-/*
-boolean Adafruit_FONA_3G::enableGPS(boolean onoff) {
-  uint16_t state;
-  // first check if its already on or off
-  if (! Adafruit_FONA::sendParseReply(F("AT+CGPS?"), F("+CGPS: "), &state) )
-    return false;
-  if (onoff && !state) {
-    if (! sendCheckReply(F("AT+CGPS=1"), ok_reply))
-      return false;
-  } else if (!onoff && state) {
-    if (! sendCheckReply(F("AT+CGPS=0"), ok_reply))
-      return false;
-    // this takes a little time
-    readline(2000); // eat '+CGPS: 0'
-  }
-  return true;
-}
-*/
 
 int8_t Adafruit_FONA::GPSstatus(void) {
   if (_type == SIM808_V2 || _type == SIM7000 || _type == SIM7070) {
@@ -2731,34 +2668,6 @@ boolean Adafruit_FONA::HTTP_GET_start(char *url, uint16_t *status, uint16_t *dat
   return true;
 }
 
-/*
-boolean Adafruit_FONA_3G::HTTP_GET_start(char *ipaddr, char *path, uint16_t port
-              uint16_t *status, uint16_t *datalen){
-  char send[100] = "AT+CHTTPACT=\"";
-  char *sendp = send + strlen(send);
-  memset(sendp, 0, 100 - strlen(send));
-  strcpy(sendp, ipaddr);
-  sendp+=strlen(ipaddr);
-  sendp[0] = '\"';
-  sendp++;
-  sendp[0] = ',';
-  itoa(sendp, port);
-  getReply(send, 500);
-  return;
-  if (! HTTP_setup(url))
-    return false;
-  // HTTP GET
-  if (! HTTP_action(FONA_HTTP_GET, status, datalen))
-    return false;
-  DEBUG_PRINT("Status: "); DEBUG_PRINTLN(*status);
-  DEBUG_PRINT("Len: "); DEBUG_PRINTLN(*datalen);
-  // HTTP response data
-  if (! HTTP_readall(datalen))
-    return false;
-  return true;
-}
-*/
-
 void Adafruit_FONA::HTTP_GET_end(void) {
   HTTP_term();
 }
@@ -3221,39 +3130,3 @@ boolean Adafruit_FONA::sendParseReplyFloat(FONAFlashStringPtr tosend,
 
   return true;
 }
-
-
-// needed for CBC and others
-
-boolean Adafruit_FONA_3G::sendParseReply(FONAFlashStringPtr tosend,
-              FONAFlashStringPtr toreply,
-              float *f, char divider, uint8_t index) {
-  getReply(tosend);
-
-  if (! parseReply(toreply, f, divider, index)) return false;
-
-  readline(); // eat 'OK'
-
-  return true;
-}
-
-
-boolean Adafruit_FONA_3G::parseReply(FONAFlashStringPtr toreply,
-          float *f, char divider, uint8_t index) {
-  char *p = prog_char_strstr(replybuffer, (prog_char*)toreply);  // get the pointer to the voltage
-  if (p == 0) return false;
-  p+=prog_char_strlen((prog_char*)toreply);
-  //DEBUG_PRINTLN(p);
-  for (uint8_t i=0; i<index;i++) {
-    // increment dividers
-    p = strchr(p, divider);
-    if (!p) return false;
-    p++;
-    //DEBUG_PRINTLN(p);
-
-  }
-  *f = atof(p);
-
-  return true;
-}
-
