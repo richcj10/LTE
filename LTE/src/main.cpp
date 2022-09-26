@@ -7,7 +7,7 @@
 unsigned long previousMillis = 0;        // will store last time LED was updated
 
 // constants won't change:
-const long interval = 30000;           // interval at which to blink (milliseconds)
+const long interval = 50000;           // interval at which to blink (milliseconds)
 
 
 void setup() {
@@ -34,7 +34,7 @@ void loop(){
     // save the last time you blinked the LED
     previousMillis = currentMillis;
 
-      LTEloop();
+    LTEloop();
 
   }
   //LEDloop();
