@@ -6,6 +6,7 @@
 #include "FS.h"
 #include <LittleFS.h>
 #include <time.h>
+#include "Hardware/Log.h"
 
 #define FORMAT_LITTLEFS_IF_FAILED true
 
@@ -55,7 +56,7 @@ void WifiComfig(struct WiFiConfig* WFC){
 }
 
 void MqttComfig(struct MQTTConfig* MQC){
-  if(LittleFS.exists(MQTTfilename)){
+  if(LITTLEFS.exists(MQTTfilename)){
     //LOG("Found File.....Load Config!\r");
     MqttloadConfiguration(MQC);
     delay(100);
@@ -66,7 +67,7 @@ void MqttComfig(struct MQTTConfig* MQC){
     //Config Doc dson't exist, wite one!
     //LOG("No MQTT Config! Save One!....");
     MqttsaveConfiguration(MQC);
-    LOG("Now Load Config! \r");            
+    //LOG("Now Load Config! \r");            
     MqttloadConfiguration(MQC);
     delay(100);
     PrintMqttConfigStruct(MQC);
@@ -97,7 +98,7 @@ void RemoteComfig(){
 // Loads the configuration from a file
 void WifiloadConfiguration(struct WiFiConfig* WFC) {
   // Open file for reading
-  File file = LittleFS.open(WiFifilename);
+  File file = LITTLEFS.open(WiFifilename);
 
   // Allocate a temporary JsonDocument
   // Don't forget to change the capacity to match your requirements.
@@ -108,7 +109,7 @@ void WifiloadConfiguration(struct WiFiConfig* WFC) {
   DeserializationError error = deserializeJson(doc, file);
   if (error){
     //LOG("WiFi - File Read Error, Rebuilding file from defults ****Rebooting****\r");
-    LittleFS.remove(WiFifilename);
+    LITTLEFS.remove(WiFifilename);
     delay(1000);
     ESP.restart(); //Reboot the device and load defaults. 
   }
@@ -135,10 +136,10 @@ void WifiloadConfiguration(struct WiFiConfig* WFC) {
 // Saves the configuration to a file
 void WifisaveConfiguration(struct WiFiConfig* WFC) {
   // Delete old file for updating.
-  LittleFS.remove(WiFifilename);
+  LITTLEFS.remove(WiFifilename);
   DefaultsLoaded = 1;
   // Open file for writing
-  File file = LittleFS.open(WiFifilename, "w");
+  File file = LITTLEFS.open(WiFifilename, "w");
   if (file) {
     //LOG("Opened File! \r");
 
@@ -149,8 +150,8 @@ void WifisaveConfiguration(struct WiFiConfig* WFC) {
     * This is ran on inital boot or file system couruption. 
     */
 
-    strlcpy(WFC->Host,GetClientId().c_str(),strlen(GetClientId().c_str())); // copy generated string into array
-    WFC->HoastLN = strlen(GetClientId().c_str()); // Save lenth
+    //strlcpy(WFC->Host,GetClientId().c_str(),strlen(GetClientId().c_str())); // copy generated string into array
+    //WFC->HoastLN = strlen(GetClientId().c_str()); // Save lenth
 
     // Set the values in the document
     doc["WIFIMode"] = WFC->WIFIMode;
@@ -171,14 +172,14 @@ void WifisaveConfiguration(struct WiFiConfig* WFC) {
     }
     file.close();
   }
-  else{
-    LOG("File not able to be opened :(");
-  }
+  //else{
+    //LOG("File not able to be opened :(");
+  //}
 }
 
 void MqttloadConfiguration(struct MQTTConfig* MQC) {
   // Open file for reading
-  File file = LittleFS.open(MQTTfilename);
+  File file = LITTLEFS.open(MQTTfilename);
 
   // Allocate a temporary JsonDocument
   // Don't forget to change the capacity to match your requirements.
@@ -188,8 +189,8 @@ void MqttloadConfiguration(struct MQTTConfig* MQC) {
   // Deserialize the JSON document
   DeserializationError error = deserializeJson(doc, file);
   if (error){
-    LOG("MQTT - File Read Error, Rebuilding file from defults ****Rebooting****\r");
-    LittleFS.remove(MQTTfilename);
+    //LOG("MQTT - File Read Error, Rebuilding file from defults ****Rebooting****\r");
+    LITTLEFS.remove(MQTTfilename);
     delay(1000);
     ESP.restart(); //Reboot the device and load defaults. 
   }
@@ -206,12 +207,12 @@ void MqttloadConfiguration(struct MQTTConfig* MQC) {
 
 void MqttsaveConfiguration(struct MQTTConfig* MQC) {
   // Delete existing file, otherwise the configuration is appended to the file
-  LittleFS.remove(MQTTfilename);
+  LITTLEFS.remove(MQTTfilename);
 
   // Open file for writing
-  File file = LittleFS.open(MQTTfilename, "w");
+  File file = LITTLEFS.open(MQTTfilename, "w");
   if (file) {
-    LOG("Opened MQTT File! \r");
+    //LOG("Opened MQTT File! \r");
     // Allocate a temporary JsonDocument
     // Don't forget to change the capacity to match your requirements.
     // Use arduinojson.org/assistant to compute the capacity.
@@ -229,9 +230,9 @@ void MqttsaveConfiguration(struct MQTTConfig* MQC) {
     }
     file.close();
   }
-  else{
-    LOG("MQTT File not able to be opened :(");
-  }
+  //else{
+    //Log("MQTT File not able to be opened :(");
+  //}
 }
 
 void PrintWiFiConfigStruct(struct WiFiConfig* WFC){
