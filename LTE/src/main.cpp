@@ -12,22 +12,34 @@ const long interval = 50000;           // interval at which to blink (millisecon
 
 void setup() {
   Startup();
-  delay(1000);
+  LogSetup(DEBUG);
+  //delay(1000);
   Serial.print("Wifi");
   //WiFiSetup();
-  Log(1,"Work Test %i", 1);
+  Log(ERROR,"Work Test %i", 1);
+  Log(LOG,"Work Test %i", 2);
+  Log(NOTIFY,"Work Test %i", 3);
+  Log(DEBUG,"Work Test %i", 4);
   //LEDUpdate(50);
   //LTEsetup();
   //RunLoop();
   //LTEloop();
 }
 
+char k = 0;
+
 void loop(){
   //RunLoop();
-  delay(1000);
+  delay(500);
   DebugLED(1);
-  delay(1000);
+  delay(500);
   DebugLED(0);
+  Log(ERROR,"Work Test %i", 1);
+  Log(LOG,"Work Test %i", 2);
+  Log(NOTIFY,"Work Test %i", 3);
+  Log(DEBUG,"Work Test %i", 4);
+  LogSetup(k++);
+  if(k>4) k = 0;
  // DebugPrint();
   unsigned long currentMillis = millis();
 

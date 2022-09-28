@@ -6,6 +6,7 @@
 #define NOTIFY 3
 #define DEBUG 4
 
-void Log(char level,const char* format, ...);
+void LogSetup(char DebugLevel);
+char Log(char level,const char* format, ...);
 
 #endif 
