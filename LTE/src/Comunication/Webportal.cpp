@@ -59,7 +59,7 @@ void onWsEvent(AsyncWebSocket* server, AsyncWebSocketClient* client,
 
         deserializeJson(jsonDocRx, msg);
 
-        uint8_t ledState = jsonDocRx["led"];
+        //uint8_t ledState = jsonDocRx["led"];
         jsonDocRx.clear();
       }
     }
@@ -70,8 +70,8 @@ void WebStart(){
   /* Start web server and web socket server */
   //lastButtonState = digitalRead(USER_SW);
   /* Start web server and web socket server */
-  //LOG("Web Service Start!\r");
-  server.on("/", HTTP_GET, [](AsyncWebServerRequest* request) {
+  Log(NOTIFY,"Web Service Start!\r");
+   server.on("/", HTTP_GET, [](AsyncWebServerRequest* request) {
     Serial.print("Root Page");
     //request->send(200, "text/html", "OK");
     request->send(LITTLEFS, "/Main.html", "text/html");

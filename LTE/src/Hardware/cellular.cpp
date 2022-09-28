@@ -7,7 +7,7 @@
 #include "LED.h"
 
 
-//#define T_ALERT 12 // Connect with solder jumper
+//https://support.hologram.io/hc/en-us/articles/360036559494-SIMCOM-SIM7000
 
 
 // this is a large buffer for replies
@@ -104,13 +104,16 @@ void NetworkSetup(){
       Serial.println(F("Enabled data!"));
     }
     delay(100);
+    LTEConnected = 1;
     fona.wirelessConnStatus();
   }
 }
 
 void NetworkStatusUpdate(){
-  LTEConnected = fona.wirelessConnStatus();
-  LTEStatus = fona.GPRSstate();
+  if(LTEConnected){
+    LTEConnected = fona.wirelessConnStatus();
+    LTEStatus = fona.GPRSstate();
+  }
 }
 
 void NetworkStop(){

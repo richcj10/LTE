@@ -1,34 +1,35 @@
 #include "Functions.h"
 #include <Arduino.h>
 #include <WiFi.h>
-#include <Wire.h>
 #include "Hardware/LED.h"
 #include "Hardware/FuelGauge.h"
 #include "Hardware/cellular.h"
 #include "Define.h"
-#include "soc/soc.h"
-#include "soc/rtc_cntl_reg.h"
+#include "Hardware/Log.h"
+#include "Hardware/IO.h"
+#include "Comunication/Webportal.h"
+#include "Comunication/Wifi.h"
+#include "FileSystem/FSInterface.h"
 
 String UN = "";
-
-
 
 unsigned long UpdatePreviousMillis = 0;  
 unsigned long DebugPreviousMillis = 0;
 
-void ConfigIO(){
-    //WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);
-    pinMode(DEBUG_LED,OUTPUT);
-    Serial.begin(115200);
-    Wire.begin(27,26);
-    UniqueName();
-}
-
 char Startup(){
     ConfigIO();
+    NetworkStop();
+    UniqueName();
+    FileStstemStart();
     LEDsetup();
     FGsetup(0);
     return 1;
+}
+
+void WiFiNetworkSetup(){
+  if(WiFiSetup() != -1){
+    WebStart();
+  }
 }
 
 void UniqueName(){
@@ -45,8 +46,8 @@ void UniqueName(){
   Serial.println(UN);
 }
 
-
 void RunLoop(){
+  WebHandel();
   if (millis() - UpdatePreviousMillis >= UPDATE_LOOP) {
     UpdatePreviousMillis = millis();
     DebugLEDToggle();
