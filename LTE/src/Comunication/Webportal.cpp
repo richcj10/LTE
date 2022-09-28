@@ -1,10 +1,12 @@
 #include <ArduinoJson.h>
+#include "FS.h"
 #include <LittleFS.h>
 #include <AsyncTCP.h>
 #include <ESPAsyncWebServer.h>
 #include "FileSystem/FSInterface.h"
 #include "Wifi.h"
 #include "Define.h"
+#include "Hardware/Log.h"
 
 #define HTTP_PORT 80
 
@@ -20,9 +22,6 @@ static char output[512];
 
 unsigned long cnt = 0;
 unsigned long LastTime = 0;
-
-#define LOG(f_, ...) \
-  { Serial.printf((f_), ##__VA_ARGS__); }
 
 void notFound(AsyncWebServerRequest* request) {
   request->send(404, "text/plain", "Not found");
@@ -40,7 +39,7 @@ void onWsEvent(AsyncWebSocket* server, AsyncWebSocketClient* client,
     //LOG("ws[%s][%u] disconnect\n", server->url(), client->id());
   } else if (type == WS_EVT_ERROR) {
     ///LOG("ws[%s][%u] error(%u): %s\n", server->url(), client->id(),
-        *((uint16_t*)arg), (char*)data);
+    //    *((uint16_t*)arg), (char*)data);
   } else if (type == WS_EVT_PONG) {
     //LOG("ws[%s][%u] pong[%u]: %s\n", server->url(), client->id(), len,
         //(len) ? (char*)data : "");
@@ -61,12 +60,6 @@ void onWsEvent(AsyncWebSocket* server, AsyncWebSocketClient* client,
         deserializeJson(jsonDocRx, msg);
 
         uint8_t ledState = jsonDocRx["led"];
-        if (ledState == 1) {
-          digitalWrite(LED, HIGH);
-        }
-        if (ledState == 0) {
-          digitalWrite(LED, LOW);
-        }
         jsonDocRx.clear();
       }
     }
@@ -81,9 +74,9 @@ void WebStart(){
   server.on("/", HTTP_GET, [](AsyncWebServerRequest* request) {
     Serial.print("Root Page");
     //request->send(200, "text/html", "OK");
-    request->send(LittleFS, "/Main.html", "text/html");
+    request->send(LITTLEFS, "/Main.html", "text/html");
   });
-  server.serveStatic("/", LittleFS, "/");
+  server.serveStatic("/", LITTLEFS, "/");
   server.onNotFound([](AsyncWebServerRequest *request){
     Serial.print("got unhandled request for ");
     Serial.println(request->url());
@@ -98,17 +91,17 @@ void WebHandel(){
   if((millis() - LastTime) > 2000){
     LastTime = millis();
     if(wsconnected == true){
-      lastButtonState = digitalRead(USER_SW);
+      //lastButtonState = digitalRead(USER_SW);
       jsonDocTx.clear();
       jsonDocTx["SSID"] = GetSSID();
-      jsonDocTx["IP"] = GetIPStr();
-      jsonDocTx["HN"] = GetHostName();
-      jsonDocTx["RSSI"] = GetRSSIStr();
-      jsonDocTx["MAC"] = GetMACStr();
-      jsonDocTx["button"] = lastButtonState;
-      jsonDocTx["Input1"] = lastButtonState;
-      jsonDocTx["Input2"] = lastButtonState;
-      jsonDocTx["Input3"] = lastButtonState;
+      //jsonDocTx["IP"] = GetIPStr();
+      //jsonDocTx["HN"] = GetHostName();
+      //jsonDocTx["RSSI"] = GetRSSIStr();
+      //jsonDocTx["MAC"] = GetMACStr();
+      //jsonDocTx["button"] = lastButtonState;
+      //jsonDocTx["Input1"] = lastButtonState;
+      //jsonDocTx["Input2"] = lastButtonState;
+      //jsonDocTx["Input3"] = lastButtonState;
 
       serializeJson(jsonDocTx, output, 512);
 
