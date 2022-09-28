@@ -12,4 +12,6 @@
 #define FONA_PWRKEY 19
 #define FONA_RST 18
 
+#define WIFI_TIMEOUT 12
+
 #endif 

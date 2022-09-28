@@ -7,6 +7,7 @@ void Pushover(const char* Title, const char* Message);
 void Pushsafer(const char* Title, const char* Message);
 void NetworkSetup();
 void NetworkTest();
+void NetworkStop();
 void CellularDisplay();
 void NetworkStatusUpdate();
 
