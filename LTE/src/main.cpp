@@ -1,7 +1,6 @@
 #include <Arduino.h>
 #include "Functions.h"
-#include "Hardware/LED.h"
-#include "Hardware/cellular.h"
+#include "Hardware/IO.h"
 #include "Hardware/Log.h"
 #include "Comunication/Webportal.h"
 

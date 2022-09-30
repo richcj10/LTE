@@ -7,6 +7,7 @@
 #include "Wifi.h"
 #include "Define.h"
 #include "Hardware/Log.h"
+#include "Functions.h"
 
 #define HTTP_PORT 80
 
@@ -94,10 +95,10 @@ void WebHandel(){
       //lastButtonState = digitalRead(USER_SW);
       jsonDocTx.clear();
       jsonDocTx["SSID"] = GetSSID();
-      //jsonDocTx["IP"] = GetIPStr();
-      //jsonDocTx["HN"] = GetHostName();
-      //jsonDocTx["RSSI"] = GetRSSIStr();
-      //jsonDocTx["MAC"] = GetMACStr();
+      jsonDocTx["IP"] = GetIP();
+      jsonDocTx["HN"] = GetUniqueName();
+      jsonDocTx["RSSI"] = GetRSSIStr();
+      jsonDocTx["MAC"] = GetMAC();
       //jsonDocTx["button"] = lastButtonState;
       //jsonDocTx["Input1"] = lastButtonState;
       //jsonDocTx["Input2"] = lastButtonState;

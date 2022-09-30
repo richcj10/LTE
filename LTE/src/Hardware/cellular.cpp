@@ -122,6 +122,11 @@ void NetworkStop(){
   digitalWrite(FONA_RST, HIGH);
 }
 
+char CheckSIM(){
+  char CCID[32];
+  int Lenth = fona.getSIMCCID(CCID);
+}
+
 void NetworkTest(){
   LTEStatus = fona.GPRSstate();
   Serial.print(F("Network status "));
@@ -140,8 +145,8 @@ void Pushover(const char* Title, const char* Message){
   fona.HTTP_ssl(true);
   fona.HTTP_connect(URL);
   int SizeOfArray = sprintf(BODY, "token=ax54xhwax8om6q4hwtjxfa7qatanjc&user=ufi8weo5covwibzqg1a6iuzhpj1r3q&title=%s&message=%s",urlencode(Title).c_str(),urlencode(Message).c_str());
-  Serial.print("Array Body = ");Serial.println(SizeOfArray);
-  Serial.print("Array Body = ");Serial.println(BODY);
+  //Serial.print("Array Body = ");Serial.println(SizeOfArray);
+  //Serial.print("Array Body = ");Serial.println(BODY);
   fona.HTTP_POST("/1/messages.json",BODY,SizeOfArray,4000);
 }
 
@@ -150,10 +155,8 @@ void Pushsafer(const char* Title, const char* Message){
   fona.HTTP_ssl(true);
   fona.HTTP_connect(URL);
   int SizeOfArray = sprintf(BODY, "k=2HKtWV9uyhxpSJ1Eigw1&t=%s&m=%s",urlencode(Title).c_str(),urlencode(Message).c_str());
-  Serial.print("Array Body = ");Serial.println(SizeOfArray);
-  Serial.print("Array Body = ");Serial.println(BODY);
-  //fona.HTTP_addHeader("Content-Type","application/x-www-form-urlencoded",33);
-  //fona.HTTP_addHeader("Content-Length","140",3);
+  //Serial.print("Array Body = ");Serial.println(SizeOfArray);
+  //Serial.print("Array Body = ");Serial.println(BODY);
   fona.HTTP_POST("/api",BODY,SizeOfArray,4000);
 }
 
