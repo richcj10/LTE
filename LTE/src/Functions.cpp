@@ -1,5 +1,4 @@
 #include "Functions.h"
-#include <Arduino.h>
 #include <WiFi.h>
 #include "Hardware/LED.h"
 #include "Hardware/FuelGauge.h"
@@ -44,6 +43,10 @@ void UniqueName(){
   UN = UN + Mac.charAt(Len-1);
   Serial.println();
   Serial.println(UN);
+}
+
+String GetUniqueName(){
+  return UN;
 }
 
 void RunLoop(){
