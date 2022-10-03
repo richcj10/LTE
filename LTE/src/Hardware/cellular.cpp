@@ -5,7 +5,7 @@
 #include "Define.h"
 #include "FuelGauge.h"
 #include "LED.h"
-
+#include "Log.h"
 
 //https://support.hologram.io/hc/en-us/articles/360036559494-SIMCOM-SIM7000
 
@@ -70,7 +70,8 @@ void LTEloop() {
 void NetworkSetup(){
   fona.powerOn(FONA_PWRKEY); // Power on the module
   
-  Serial.println(F("Initializing....(May take several seconds)"));
+  //Serial.println(F("Initializing....(May take several seconds)"));
+  Log(NOTIFY,"Starting LTE Radio");
 
   // Software serial:
   Serial1.begin(115200, SERIAL_8N1, RXD2, TXD2); // Default SIM7000 shield baud rate
@@ -80,20 +81,23 @@ void NetworkSetup(){
   //delay(100); // Short pause to let the command run
   //Serial1.begin(38400);
   if (! fona.begin(Serial1)) {
-    Serial.println(F("Couldn't find FONA"));
+    //Serial.println(F("Couldn't find FONA"));
+    Log(ERROR,"LTE Radio Not Found");
     LTEerror = 1;
   }
 
   type = fona.type();
-  Serial.println(F("FONA is OK"));
-  Serial.print(F("Found "));
+  //Serial.println(F("FONA is OK"));
+  //Serial.print(F("Found "));
+  Log(NOTIFY,"LTE Radio OK");
   if(LTEerror == 0){
     fona.setNetworkSettings(F("hologram")); // For Hologram SIM card
     delay(1000);
     fona.enableGPRS(true);
     if (!fona.wirelessConnStatus()) {
       while (!fona.openWirelessConnection(true)) {
-        Serial.println(F("Failed to enable connection, retrying..."));
+        //Serial.println(F("Failed to enable connection, retrying..."));
+        Log(NOTIFY,"LTE Connection Retry");
         delay(1000); // Retry every 2s
         counter++;
         if(counter > 5){
@@ -101,7 +105,8 @@ void NetworkSetup(){
           break;
         }
       }
-      Serial.println(F("Enabled data!"));
+      //Serial.println(F("Enabled data!"));
+      Log(NOTIFY,"Data OK");
     }
     delay(100);
     LTEConnected = 1;
@@ -116,6 +121,8 @@ void NetworkStatusUpdate(){
   }
 }
 
+
+
 void NetworkStop(){
   digitalWrite(FONA_RST, LOW);
   delay(1000);
@@ -125,6 +132,7 @@ void NetworkStop(){
 char CheckSIM(){
   char CCID[32];
   int Lenth = fona.getSIMCCID(CCID);
+  return 0;
 }
 
 void NetworkTest(){
@@ -141,23 +149,27 @@ void NetworkTest(){
 }
 
 void Pushover(const char* Title, const char* Message){
+  Log(NOTIFY,"POVR Sending");
   sprintf(URL, "api.pushover.net");
   fona.HTTP_ssl(true);
   fona.HTTP_connect(URL);
   int SizeOfArray = sprintf(BODY, "token=ax54xhwax8om6q4hwtjxfa7qatanjc&user=ufi8weo5covwibzqg1a6iuzhpj1r3q&title=%s&message=%s",urlencode(Title).c_str(),urlencode(Message).c_str());
   //Serial.print("Array Body = ");Serial.println(SizeOfArray);
   //Serial.print("Array Body = ");Serial.println(BODY);
-  fona.HTTP_POST("/1/messages.json",BODY,SizeOfArray,4000);
+  char value = fona.HTTP_POST("/1/messages.json",BODY,SizeOfArray,4000);
+  Log(NOTIFY,"POVR Sent, Result = %d",value);
 }
 
 void Pushsafer(const char* Title, const char* Message){
+  Log(NOTIFY,"PSVR Sending");
   sprintf(URL, "pushsafer.com");
   fona.HTTP_ssl(true);
   fona.HTTP_connect(URL);
   int SizeOfArray = sprintf(BODY, "k=2HKtWV9uyhxpSJ1Eigw1&t=%s&m=%s",urlencode(Title).c_str(),urlencode(Message).c_str());
   //Serial.print("Array Body = ");Serial.println(SizeOfArray);
   //Serial.print("Array Body = ");Serial.println(BODY);
-  fona.HTTP_POST("/api",BODY,SizeOfArray,4000);
+  char value = fona.HTTP_POST("/api",BODY,SizeOfArray,4000);
+  Log(NOTIFY,"PSFR Sent, Result = %d",value);
 }
 
 String urlencode(String str){
@@ -205,4 +217,36 @@ void CellularDisplay(){
   else if (LTEStatus == 5) Serial.println(F("Registered roaming"));
   else Serial.println(F("N/A"));
   Serial.print("LTE Status: ");Serial.println(LTEConnected);
+}
+
+String CellStatString(){
+  return "Active";
+}
+
+String CellSIMString(){
+  return "OK";
+}
+
+String CellSigString(){
+  return "-78";
+}
+
+String CellNetworkString(){
+  return "hologram";
+}
+
+String CellIPString(){
+  return "10.10.80.5";
+}
+
+String CellGPSString(){
+ return "OFF";
+}
+
+String CellLATString(){
+  return "N/A";
+}
+
+String CellLOGString(){
+  return "N/A";
 }

@@ -4,12 +4,10 @@
 #include "Define.h"
 
 const char *soft_ap_password = "LTEAP";
-//const char* wifi_network_ssid = "Lights.Camera.Action";
-//const char* wifi_network_password =  "RR58fa!8";
-//const char* ssid = "Lights.Camera.Action";
-//const char* password = "RR58fa!8";
-const char* ssid = "EnovateEng";
-const char* password = "WirelessENG4u";
+const char* ssid = "Lights.Camera.Action";
+const char* password = "RR58fa!8";
+//const char* ssid = "EnovateEng";
+//const char* password = "WirelessENG4u";
 
 int WiFiTimeout = 0;
 bool HaveWiFi = 0;

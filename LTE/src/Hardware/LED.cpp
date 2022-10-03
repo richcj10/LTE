@@ -12,6 +12,7 @@ CRGB leds[NUM_LEDS];
 
 void LEDsetup() {
     FastLED.addLeds<NEOPIXEL, DATA_PIN>(leds, NUM_LEDS);  // GRB ordering is assumed
+    LEDUpdate(40);
 }
 
 void LEDUpdate(char Value) {

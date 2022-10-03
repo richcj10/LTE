@@ -1668,24 +1668,24 @@ boolean Adafruit_FONA_LTE::HTTP_POST(const char *URI,const char *body, uint8_t b
 
   uint16_t status, datalen;
   readline(10000);
-  DEBUG_PRINT("\t<--- "); DEBUG_PRINTLN(replybuffer);
+  //DEBUG_PRINT("\t<--- "); DEBUG_PRINTLN(replybuffer);
 
   if (! parseReply(F("+SHREQ: \"POST\""), &status, ',', 1))
     return false;
   if (! parseReply(F("+SHREQ: \"POST\""), &datalen, ',', 2))
     return false;
 
-  DEBUG_PRINT("HTTP status: "); DEBUG_PRINTLN(status);
-  DEBUG_PRINT("Data length: "); DEBUG_PRINTLN(datalen);
+  //DEBUG_PRINT("HTTP status: "); DEBUG_PRINTLN(status);
+  //DEBUG_PRINT("Data length: "); DEBUG_PRINTLN(datalen);
 
   //if (status != 200) return false;
 
   // Read server response
   getReply(F("AT+SHREAD=0,"), datalen, Timeout);
   readline(Timeout);
-  DEBUG_PRINT("\t<--- "); DEBUG_PRINTLN(replybuffer); // +SHREAD: <datalen>
+  //DEBUG_PRINT("\t<--- "); DEBUG_PRINTLN(replybuffer); // +SHREAD: <datalen>
   readline(Timeout);
-  DEBUG_PRINT("\t<--- "); DEBUG_PRINTLN(replybuffer); // Print out server reply
+  //DEBUG_PRINT("\t<--- "); DEBUG_PRINTLN(replybuffer); // Print out server reply
 
   sendCheckReply(F("AT+SHDISC"), ok_reply, 10000); // Disconnect HTTP
 
@@ -2844,14 +2844,14 @@ uint8_t Adafruit_FONA::getReply(const char *send, uint16_t timeout) {
   flushInput();
 
 
-  DEBUG_PRINT(F("\t---> ")); DEBUG_PRINTLN(send);
+  //DEBUG_PRINT(F("\t---> ")); DEBUG_PRINTLN(send);
 
 
   mySerial->println(send);
 
   uint8_t l = readline(timeout);
 
-  DEBUG_PRINT (F("\t<--- ")); DEBUG_PRINTLN(replybuffer);
+  //DEBUG_PRINT (F("\t<--- ")); DEBUG_PRINTLN(replybuffer);
 
   return l;
 }
@@ -2860,14 +2860,14 @@ uint8_t Adafruit_FONA::getReply(FONAFlashStringPtr send, uint16_t timeout) {
   flushInput();
 
 
-  DEBUG_PRINT(F("\t---> ")); DEBUG_PRINTLN(send);
+  //DEBUG_PRINT(F("\t---> ")); DEBUG_PRINTLN(send);
 
 
   mySerial->println(send);
 
   uint8_t l = readline(timeout);
 
-  DEBUG_PRINT (F("\t<--- ")); DEBUG_PRINTLN(replybuffer);
+  //DEBUG_PRINT (F("\t<--- ")); DEBUG_PRINTLN(replybuffer);
 
   return l;
 }
@@ -2877,7 +2877,7 @@ uint8_t Adafruit_FONA::getReply(FONAFlashStringPtr prefix, char *suffix, uint16_
   flushInput();
 
 
-  DEBUG_PRINT(F("\t---> ")); DEBUG_PRINT(prefix); DEBUG_PRINTLN(suffix);
+  //DEBUG_PRINT(F("\t---> ")); DEBUG_PRINT(prefix); DEBUG_PRINTLN(suffix);
 
 
   mySerial->print(prefix);
@@ -2885,7 +2885,7 @@ uint8_t Adafruit_FONA::getReply(FONAFlashStringPtr prefix, char *suffix, uint16_
 
   uint8_t l = readline(timeout);
 
-  DEBUG_PRINT (F("\t<--- ")); DEBUG_PRINTLN(replybuffer);
+  //DEBUG_PRINT (F("\t<--- ")); DEBUG_PRINTLN(replybuffer);
 
   return l;
 }
@@ -2895,7 +2895,7 @@ uint8_t Adafruit_FONA::getReply(FONAFlashStringPtr prefix, int32_t suffix, uint1
   flushInput();
 
 
-  DEBUG_PRINT(F("\t---> ")); DEBUG_PRINT(prefix); DEBUG_PRINTLN(suffix, DEC);
+  //DEBUG_PRINT(F("\t---> ")); DEBUG_PRINT(prefix); DEBUG_PRINTLN(suffix, DEC);
 
 
   mySerial->print(prefix);
@@ -2903,7 +2903,7 @@ uint8_t Adafruit_FONA::getReply(FONAFlashStringPtr prefix, int32_t suffix, uint1
 
   uint8_t l = readline(timeout);
 
-  DEBUG_PRINT (F("\t<--- ")); DEBUG_PRINTLN(replybuffer);
+  //DEBUG_PRINT (F("\t<--- ")); DEBUG_PRINTLN(replybuffer);
 
   return l;
 }
@@ -2913,8 +2913,8 @@ uint8_t Adafruit_FONA::getReply(FONAFlashStringPtr prefix, int32_t suffix1, int3
   flushInput();
 
 
-  DEBUG_PRINT(F("\t---> ")); DEBUG_PRINT(prefix);
-  DEBUG_PRINT(suffix1, DEC); DEBUG_PRINT(','); DEBUG_PRINTLN(suffix2, DEC);
+  //DEBUG_PRINT(F("\t---> ")); DEBUG_PRINT(prefix);
+  //DEBUG_PRINT(suffix1, DEC); DEBUG_PRINT(','); DEBUG_PRINTLN(suffix2, DEC);
 
 
   mySerial->print(prefix);
@@ -2924,7 +2924,7 @@ uint8_t Adafruit_FONA::getReply(FONAFlashStringPtr prefix, int32_t suffix1, int3
 
   uint8_t l = readline(timeout);
 
-  DEBUG_PRINT (F("\t<--- ")); DEBUG_PRINTLN(replybuffer);
+  //DEBUG_PRINT (F("\t<--- ")); DEBUG_PRINTLN(replybuffer);
 
   return l;
 }
@@ -2934,8 +2934,8 @@ uint8_t Adafruit_FONA::getReplyQuoted(FONAFlashStringPtr prefix, FONAFlashString
   flushInput();
 
 
-  DEBUG_PRINT(F("\t---> ")); DEBUG_PRINT(prefix);
-  DEBUG_PRINT('"'); DEBUG_PRINT(suffix); DEBUG_PRINTLN('"');
+  //DEBUG_PRINT(F("\t---> ")); DEBUG_PRINT(prefix);
+  //DEBUG_PRINT('"'); DEBUG_PRINT(suffix); DEBUG_PRINTLN('"');
 
 
   mySerial->print(prefix);
@@ -2945,7 +2945,7 @@ uint8_t Adafruit_FONA::getReplyQuoted(FONAFlashStringPtr prefix, FONAFlashString
 
   uint8_t l = readline(timeout);
 
-  DEBUG_PRINT (F("\t<--- ")); DEBUG_PRINTLN(replybuffer);
+  //DEBUG_PRINT (F("\t<--- ")); DEBUG_PRINTLN(replybuffer);
 
   return l;
 }

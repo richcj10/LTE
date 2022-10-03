@@ -2,10 +2,12 @@
 #include <Arduino.h>
 #include <stdio.h>
 #include <stdarg.h>
+#include "Comunication/Webportal.h"
 
 bool ConfigArray[5] = {1,1,1,1,0};
+bool WiFiLog = 0;
 
-void LogSetup(char DebugLevel){
+void LogSetup(char DebugLevel, bool WifiMode){
     switch (DebugLevel){
         case ERROR:
             ConfigArray[0] = 1;
@@ -31,6 +33,9 @@ void LogSetup(char DebugLevel){
             ConfigArray[2] = 1;
             ConfigArray[3] = 1;
             break;
+    }
+    if(WifiMode){
+        WiFiLog = 1;
     }
 }
 
@@ -90,8 +95,12 @@ char Log(char level,const char* format, ...){
     }
     
     vsnprintf(temp, len+1, format, arg);
-    ets_printf("%s", temp);
 
+    ets_printf("%s", temp);
+    if(WiFiLog){
+        String s = temp;
+        WebLogSend(s);
+    }
     va_end(arg);
     if(len >= sizeof(loc_buf)){
         free(temp);
