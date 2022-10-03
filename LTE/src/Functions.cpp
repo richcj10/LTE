@@ -13,15 +13,23 @@
 String UN = "";
 
 unsigned long UpdatePreviousMillis = 0;  
+unsigned long LTEPreviousMillis = 0;
 unsigned long DebugPreviousMillis = 0;
+unsigned long LTETestPreviousMillis = 0;
 
-char Startup(){
+char Startup(bool WifiEnable, bool LTEEnable){
     ConfigIO();
     NetworkStop();
     UniqueName();
     FileStstemStart();
     LEDsetup();
     FGsetup(0);
+    if(WifiEnable){
+      WiFiNetworkSetup();
+    }
+    if(LTEEnable){
+      LTEsetup();
+    }
     return 1;
 }
 
@@ -56,6 +64,17 @@ void RunLoop(){
     DebugLEDToggle();
     FGloop();
     NetworkStatusUpdate();
+  }
+}
+
+void LTELoop(){
+  if (millis() - LTEPreviousMillis >= LTE_LOOP) {
+    LTEPreviousMillis = millis();
+    LTEloop();
+  }
+  if (millis() - LTETestPreviousMillis >= LTE_Test_LOOP) {
+    LTETestPreviousMillis = millis();
+    NetworkTest();
   }
 }
 

@@ -3,6 +3,8 @@
 
 #define UPDATE_LOOP 1000
 #define DEBUG_LOOP 3000
+#define LTE_LOOP 30000
+#define LTE_Test_LOOP 5000
 
 #define NUM_LEDS 1
 #define DATA_PIN 21

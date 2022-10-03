@@ -8,6 +8,9 @@
 #include "Define.h"
 #include "Hardware/Log.h"
 #include "Functions.h"
+#include "Hardware/FuelGauge.h"
+#include "Hardware/cellular.h"
+#include "Hardware/Log.h"
 
 #define HTTP_PORT 80
 
@@ -24,6 +27,10 @@ static char output[512];
 unsigned long cnt = 0;
 unsigned long LastTime = 0;
 
+char JsonType = 0;
+bool Firstupdate = 0;
+int WebHandelTime = 0;
+
 void notFound(AsyncWebServerRequest* request) {
   request->send(404, "text/plain", "Not found");
 }
@@ -32,8 +39,22 @@ void onWsEvent(AsyncWebSocket* server, AsyncWebSocketClient* client,
                AwsEventType type, void* arg, uint8_t* data, size_t len) {
   if (type == WS_EVT_CONNECT) {
     wsconnected = true;
-    //LOG("ws[%s][%u] connect\n", server->url(), client->id());
-    // client->printf("Hello Client %u :)", client->id());
+    Firstupdate = 1;
+    jsonDocTx["Type"] = 0;
+    jsonDocTx["SSID"] = GetSSID();
+    jsonDocTx["IP"] = GetIP();
+    jsonDocTx["HN"] = GetUniqueName();
+    jsonDocTx["MAC"] = GetMAC();
+
+    serializeJson(jsonDocTx, output, 512);
+
+    if (ws.availableForWriteAll()) {
+      ws.textAll(output);
+      Log(NOTIFY,"Sent");
+    } 
+    else {
+      Log(ERROR,"Queue Is Full");
+    }
     client->ping();
   } else if (type == WS_EVT_DISCONNECT) {
     wsconnected = false;
@@ -75,9 +96,9 @@ void WebStart(){
    server.on("/", HTTP_GET, [](AsyncWebServerRequest* request) {
     Serial.print("Root Page");
     //request->send(200, "text/html", "OK");
-    request->send(LITTLEFS, "/Main.html", "text/html");
+    request->send(LittleFS, "/Main.html", "text/html");
   });
-  server.serveStatic("/", LITTLEFS, "/");
+  server.serveStatic("/", LittleFS, "/");
   server.onNotFound([](AsyncWebServerRequest *request){
     Serial.print("got unhandled request for ");
     Serial.println(request->url());
@@ -88,32 +109,71 @@ void WebStart(){
   server.begin();
 }
 
+
 void WebHandel(){
-  if((millis() - LastTime) > 2000){
+  if((millis() - LastTime) > WebHandelTime){
     LastTime = millis();
     if(wsconnected == true){
-      //lastButtonState = digitalRead(USER_SW);
+      if(Firstupdate == 1) WebHandelTime = 100; //Send data for quick update
       jsonDocTx.clear();
-      jsonDocTx["SSID"] = GetSSID();
-      jsonDocTx["IP"] = GetIP();
-      jsonDocTx["HN"] = GetUniqueName();
-      jsonDocTx["RSSI"] = GetRSSIStr();
-      jsonDocTx["MAC"] = GetMAC();
-      //jsonDocTx["button"] = lastButtonState;
-      //jsonDocTx["Input1"] = lastButtonState;
-      //jsonDocTx["Input2"] = lastButtonState;
-      //jsonDocTx["Input3"] = lastButtonState;
+      jsonDocTx["Type"] = JsonType;
+      if(JsonType == 1){
+        jsonDocTx["RSSI"] = GetRSSIStr();
+        jsonDocTx["IO1"] = 1;
+        jsonDocTx["IO2"] = 1;
+      }
+
+      if(JsonType == 2){
+        jsonDocTx["CELST"] = CellStatString();
+        jsonDocTx["CELIP"] = CellIPString();
+        jsonDocTx["CELSIG"] = CellSigString();
+        jsonDocTx["CELNT"] = CellNetworkString();
+        jsonDocTx["GPSEN"] = CellGPSString();
+        jsonDocTx["GPSLAT"] = CellLATString();
+        jsonDocTx["GPSLOG"] = CellLOGString();
+        jsonDocTx["SIM"] = CellSIMString();
+      }
+
+      if(JsonType == 3){
+        jsonDocTx["BATV"] = GetCellVString();
+        jsonDocTx["BATP"] = GetCellSoCString();
+        jsonDocTx["PWRMD"] = GetPowerModeString();
+        Firstupdate = 0;
+        WebHandelTime = 500;
+      }
 
       serializeJson(jsonDocTx, output, 512);
 
-      Serial.printf("Sending: %s", output);
       if (ws.availableForWriteAll()) {
         ws.textAll(output);
-        Serial.printf("...done\r\n");
+        //Log(NOTIFY,"Sent");
       } 
       else {
-        Serial.printf("...queue is full\r\n");
+        Log(ERROR,"Queue Is Full");
       }
     }
+    JsonType++;
+    if(JsonType >= 4){
+      JsonType = 1;
+    }
   }
+}
+
+char WebLogSend(String LogString){
+  if(wsconnected == true){
+    //Serial.println(LogString);
+    jsonDocTx.clear();
+    jsonDocTx["Type"] = 10; //Log Send Command
+    jsonDocTx["LOG"] = LogString + "\n";//\n";
+    serializeJson(jsonDocTx, output, 512);
+    if (ws.availableForWriteAll()) {
+      ws.textAll(output);
+        //Log(NOTIFY,"Sent Log");
+    } 
+/*       else {
+        Log(ERROR,"Queue Is Full");
+      } */
+    return 1;
+  }
+  return 0;
 }

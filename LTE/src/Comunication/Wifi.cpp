@@ -4,12 +4,10 @@
 #include "Define.h"
 
 const char *soft_ap_password = "LTEAP";
-//const char* wifi_network_ssid = "**REDACTED-SSID**";
-//const char* wifi_network_password =  "**REDACTED-PASS**";
-//const char* ssid = "**REDACTED-SSID**";
-//const char* password = "**REDACTED-PASS**";
 const char* ssid = "**REDACTED-SSID**";
 const char* password = "**REDACTED-PASS**";
+//const char* ssid = "**REDACTED-SSID**";
+//const char* password = "**REDACTED-PASS**";
 
 int WiFiTimeout = 0;
 bool HaveWiFi = 0;

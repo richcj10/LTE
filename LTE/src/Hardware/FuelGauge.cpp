@@ -1,8 +1,8 @@
 #include "FuelGauge.h"
 
 #include <Wire.h> // Needed for I2C
-
 #include <SparkFun_MAX1704x_Fuel_Gauge_Arduino_Library.h> // Click here to get the library: http://librarymanager/All#SparkFun_MAX1704x_Fuel_Gauge_Arduino_Library
+#include "Log.h"
 
 SFE_MAX1704X lipo(MAX1704X_MAX17048); // Create a MAX17048
 
@@ -45,21 +45,24 @@ void FGloop(){
 
 void FGDisplay(){
 	if(FGerror == 0){
-		Serial.print("Voltage: ");
-		Serial.print(voltage);  // Print the battery voltage
-		Serial.println(" V");
+		//Serial.print("Voltage: ");
+		//Serial.print(voltage);  // Print the battery voltage
+		//Serial.println(" V");
 
-		Serial.print("Percentage: ");
-		Serial.print(soc); // Print the battery state of charge
-		Serial.println(" %");
+		//Serial.print("Percentage: ");
+		//Serial.print(soc); // Print the battery state of charge
+		//Serial.println(" %");
 
-		Serial.print("Alert: ");
-		Serial.println(alert);
-		Serial.println();
+		//Serial.print("Alert: ");
+		//Serial.println(alert);
+		//Serial.println();
+		Log(NOTIFY," Cell V = %.1f",voltage);
+		Log(NOTIFY," Cell SOC = %.1f",soc);
 	}
 	else{
-		Serial.print("No FG");
-		Serial.println();
+		//Serial.print("No FG");
+		//Serial.println();
+		Log(ERROR,"NoFG");
 	}
 }
 
@@ -69,6 +72,18 @@ float GetCellV(){
 
 float GetCellSoC(){
 	return soc;
+}
+
+String GetCellVString(){
+	return String(voltage,2);
+}
+
+String GetCellSoCString(){
+	return String(soc,2);
+}
+
+String GetPowerModeString(){
+	return "AC";
 }
 
 bool GetCellAlert(){
