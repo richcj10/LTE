@@ -64,6 +64,7 @@ void RunLoop(){
     DebugLEDToggle();
     FGloop();
     NetworkStatusUpdate();
+    UpdateTime();
   }
 }
 
@@ -83,5 +84,6 @@ void DebugPrint(){
     DebugPreviousMillis = millis();
     FGDisplay();
     CellularDisplay();
+    PrintTime();
   }
 }

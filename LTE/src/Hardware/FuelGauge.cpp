@@ -56,8 +56,8 @@ void FGDisplay(){
 		//Serial.print("Alert: ");
 		//Serial.println(alert);
 		//Serial.println();
-		Log(NOTIFY," Cell V = %.1f",voltage);
-		Log(NOTIFY," Cell SOC = %.1f",soc);
+		Log(LOG," Cell V = %.1f\n",voltage);
+		Log(LOG," Cell SOC = %.1f\n",soc);
 	}
 	else{
 		//Serial.print("No FG");

@@ -26,6 +26,7 @@ void setup() {\
 
 void loop(){
   RunLoop();
-  LTELoop();  //LEDloop();
+  LTELoop();
+  DebugPrint();
   // put your main code here, to run repeatedly:
 }
