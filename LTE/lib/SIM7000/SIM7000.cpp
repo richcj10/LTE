@@ -58,7 +58,7 @@ boolean Adafruit_FONA::begin(Stream &port) {
     digitalWrite(_rstpin, HIGH);
   }
 
-  DEBUG_PRINTLN(F("Attempting to open comm with ATs"));
+  //DEBUG_PRINTLN(F("Attempting to open comm with ATs"));
   // give 7 seconds to reboot
   int16_t timeout = 7000;
 
@@ -101,13 +101,13 @@ boolean Adafruit_FONA::begin(Stream &port) {
 
 
   // DEBUG_PRINT(F("\t---> ")); DEBUG_PRINTLN("ATI");
-  DEBUG_PRINT(F("\t---> ")); DEBUG_PRINTLN("AT+GMR"); // This definitely should have the module name, but ATI may not
+  //DEBUG_PRINT(F("\t---> ")); DEBUG_PRINTLN("AT+GMR"); // This definitely should have the module name, but ATI may not
 
   // mySerial->println("ATI");
   mySerial->println("AT+GMR");
   readline(500, true);
 
-  DEBUG_PRINT (F("\t<--- ")); DEBUG_PRINTLN(replybuffer);
+  //DEBUG_PRINT (F("\t<--- ")); DEBUG_PRINTLN(replybuffer);
 
 
 

@@ -6,7 +6,7 @@
 #define NOTIFY 3
 #define DEBUG 4
 
-void LogSetup(char DebugLevel, bool WifiMode);
+void LogSetup(char DebugLevel, bool WebPage);
 char Log(char level,const char* format, ...);
 
 #endif 

@@ -2,6 +2,11 @@
 #include <WiFi.h>
 #include "Hardware/Log.h"
 #include "Define.h"
+#include <NTPClient.h>
+#include <WiFiUdp.h>
+
+WiFiUDP ntpUDP;
+NTPClient timeClient(ntpUDP, "3.north-america.pool.ntp.org", 3600, 60000);
 
 const char *soft_ap_password = "LTEAP";
 const char* ssid = "Lights.Camera.Action";
@@ -28,8 +33,31 @@ char WiFiSetup(){
   }
   HaveWiFi = 1;
   CurrentIP = WiFi.localIP();
-  Log(NOTIFY,"Connected to Wifi, The IP Address is :%d.%d.%d.%d", CurrentIP[0], CurrentIP[1], CurrentIP[2], CurrentIP[3]);
+  timeClient.begin();
+  Log(NOTIFY,"Connected to Wifi, The IP Address is :%d.%d.%d.%d\n", CurrentIP[0], CurrentIP[1], CurrentIP[2], CurrentIP[3]);
   return 1;
+}
+
+void UpdateTime(){
+  timeClient.update();
+}
+
+void PrintTime(){
+  Log(NOTIFY,"Time = %s\n",timeClient.getFormattedTime());
+}
+
+char CheckTime(char hour,char minute){
+  if(timeClient.isTimeSet()) {
+    if (hour == timeClient.getHours() && minute == timeClient.getMinutes()) {
+      return 1;
+    }
+    else{
+      return 0;
+    }
+  }
+  else{
+    return -1;
+  } 
 }
 
 String GetIP(){

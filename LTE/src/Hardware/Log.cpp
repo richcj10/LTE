@@ -7,7 +7,7 @@
 bool ConfigArray[5] = {1,1,1,1,0};
 bool WiFiLog = 0;
 
-void LogSetup(char DebugLevel, bool WifiMode){
+void LogSetup(char DebugLevel, bool WebPage){
     switch (DebugLevel){
         case ERROR:
             ConfigArray[0] = 1;
@@ -34,7 +34,7 @@ void LogSetup(char DebugLevel, bool WifiMode){
             ConfigArray[3] = 1;
             break;
     }
-    if(WifiMode){
+    if(WebPage){
         WiFiLog = 1;
     }
 }
@@ -43,7 +43,7 @@ char Log(char level,const char* format, ...){
     switch (level){
         case ERROR:
             if(ConfigArray[0] == 1){
-                ets_printf("\n%s", "ERR>");
+                ets_printf("%s", "ERR>");
             }
             else{
                 return 0; 
@@ -51,7 +51,7 @@ char Log(char level,const char* format, ...){
             break;
         case LOG:
             if(ConfigArray[1] == 1){
-                ets_printf("\n%s", "LOG>");
+                ets_printf("%s", "LOG>");
             }
             else{
                 return 0; 
@@ -59,7 +59,7 @@ char Log(char level,const char* format, ...){
             break;
         case NOTIFY:
             if(ConfigArray[2] == 1){
-                ets_printf("\n%s", "NOTFY>");
+                ets_printf("%s", "NOTFY>");
             }
             else{
                 return 0; 
@@ -67,14 +67,14 @@ char Log(char level,const char* format, ...){
             break;
         case DEBUG:
             if(ConfigArray[3] == 1){
-                ets_printf("\n%s", "DEBUG>");
+                ets_printf("%s", "DEBUG>");
             }
             else{
                 return 0; 
             }
             break;
         default:
-            ets_printf("\n%s", "ALT>");
+            ets_printf("%s", "ALT>");
             break;
     }
     static char loc_buf[64];
