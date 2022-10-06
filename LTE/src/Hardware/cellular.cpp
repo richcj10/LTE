@@ -61,9 +61,12 @@ void LTEsetup(){
     //Serial.println(F("Couldn't find FONA"));
     Log(ERROR,"LTE Radio Not Found");
     LTEerror = 1;
+    LTEon = 0;
   }
-  type = fona.type();
-  Log(NOTIFY,"LTE Radio OK");
+  else{
+    type = fona.type();
+    Log(NOTIFY,"LTE Radio OK");
+  }
 }
   
 void LTEloop() {
