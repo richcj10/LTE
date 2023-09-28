@@ -16,6 +16,7 @@ const char* password = "**REDACTED-PASS**";
 
 int WiFiTimeout = 0;
 bool HaveWiFi = 0;
+char status = 0;
 IPAddress CurrentIP;
 
 char WiFiSetup(){
@@ -34,7 +35,8 @@ char WiFiSetup(){
   HaveWiFi = 1;
   CurrentIP = WiFi.localIP();
   timeClient.begin();
-  Log(NOTIFY,"Connected to Wifi, The IP Address is :%d.%d.%d.%d\n", CurrentIP[0], CurrentIP[1], CurrentIP[2], CurrentIP[3]);
+  Log(NOTIFY,"Connected to Wifi, The IP Address is :%d.%d.%d.%d\r\n", CurrentIP[0], CurrentIP[1], CurrentIP[2], CurrentIP[3]);
+  status = 1;
   return 1;
 }
 
@@ -58,6 +60,10 @@ char CheckTime(char hour,char minute){
   else{
     return -1;
   } 
+}
+
+char GetWiFiStatus(){
+  return status;
 }
 
 String GetIP(){

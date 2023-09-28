@@ -3,6 +3,8 @@
 #include "Hardware/IO.h"
 #include "Hardware/Log.h"
 #include "Comunication/Webportal.h"
+#include "Hardware/cellular.h"
+#include "Hardware/LED.h"
 
 unsigned long previousMillis = 0;        // will store last time LED was updated
 
@@ -10,18 +12,18 @@ unsigned long previousMillis = 0;        // will store last time LED was updated
 const long interval = 00;           // interval at which to blink (milliseconds)
 
 
-void setup() {\
+void setup() {
   LogSetup(DEBUG,1);
   Startup(1,1);
-  Log(NOTIFY,"Started Main Program, took %lu mS",millis());
+  Log(NOTIFY,"Started Main Program, took %lu mS\n\r",millis());
 
-  //Log(ERROR,"Work Test %i", 1);
-  //Log(LOG,"Work Test %i", 2);
-  //Log(NOTIFY,"Work Test %i", 3);
-  //Log(DEBUG,"Work Test %i", 4);
+  //SendTextMsg();
   //LEDUpdate(50);
   //RunLoop();
   //LTEloop();
+  LEDColor(96);
+  LEDBrightness(10);
+  SetLEDStatus(LED_FLASH,1000);
 }
 
 void loop(){

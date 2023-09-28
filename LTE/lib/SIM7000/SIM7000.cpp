@@ -401,98 +401,6 @@ boolean Adafruit_FONA::setVolume(uint8_t i) {
   return sendCheckReply(F("AT+CLVL="), i, ok_reply);
 }
 
-
-boolean Adafruit_FONA::playDTMF(char dtmf) {
-  char str[4];
-  str[0] = '\"';
-  str[1] = dtmf;
-  str[2] = '\"';
-  str[3] = 0;
-  return sendCheckReply(F("AT+CLDTMF=3,"), str, ok_reply);
-}
-
-boolean Adafruit_FONA::playToolkitTone(uint8_t t, uint16_t len) {
-  return sendCheckReply(F("AT+STTONE=1,"), t, len, ok_reply);
-}
-
-boolean Adafruit_FONA::setMicVolume(uint8_t a, uint8_t level) {
-  // For SIM800, 0 is main audio channel, 1 is aux, 2 is main audio channel (hands-free), 3 is aux channel (hands-free)
-  if (a > 3) return false;
-
-  return sendCheckReply(F("AT+CMIC="), a, level, ok_reply);
-}
-
-/********* FM RADIO *******************************************************/
-
-
-boolean Adafruit_FONA::FMradio(boolean onoff, uint8_t a) {
-  if (! onoff) {
-    return sendCheckReply(F("AT+FMCLOSE"), ok_reply);
-  }
-
-  // 0 is headset, 1 is external audio
-  if (a > 1) return false;
-
-  return sendCheckReply(F("AT+FMOPEN="), a, ok_reply);
-}
-
-boolean Adafruit_FONA::tuneFMradio(uint16_t station) {
-  // Fail if FM station is outside allowed range.
-  if ((station < 870) || (station > 1090))
-    return false;
-
-  return sendCheckReply(F("AT+FMFREQ="), station, ok_reply);
-}
-
-boolean Adafruit_FONA::setFMVolume(uint8_t i) {
-  // Fail if volume is outside allowed range (0-6).
-  if (i > 6) {
-    return false;
-  }
-  // Send FM volume command and verify response.
-  return sendCheckReply(F("AT+FMVOLUME="), i, ok_reply);
-}
-
-int8_t Adafruit_FONA::getFMVolume() {
-  uint16_t level;
-
-  if (! sendParseReply(F("AT+FMVOLUME?"), F("+FMVOLUME: "), &level) ) return 0;
-
-  return level;
-}
-
-int8_t Adafruit_FONA::getFMSignalLevel(uint16_t station) {
-  // Fail if FM station is outside allowed range.
-  if ((station < 875) || (station > 1080)) {
-    return -1;
-  }
-
-  // Send FM signal level query command.
-  // Note, need to explicitly send timeout so right overload is chosen.
-  getReply(F("AT+FMSIGNAL="), station, FONA_DEFAULT_TIMEOUT_MS);
-  // Check response starts with expected value.
-  char *p = prog_char_strstr(replybuffer, PSTR("+FMSIGNAL: "));
-  if (p == 0) return -1;
-  p+=11;
-  // Find second colon to get start of signal quality.
-  p = strchr(p, ':');
-  if (p == 0) return -1;
-  p+=1;
-  // Parse signal quality.
-  int8_t level = atoi(p);
-  readline();  // eat the "OK"
-  return level;
-}
-
-/********* PWM/BUZZER **************************************************/
-
-boolean Adafruit_FONA::setPWM(uint16_t period, uint8_t duty) {
-  if (period > 2000) return false;
-  if (duty > 100) return false;
-
-  return sendCheckReply(F("AT+SPWM=0,"), period, duty, ok_reply);
-}
-
 /********* CALL PHONES **************************************************/
 boolean Adafruit_FONA::callPhone(char *number) {
   char sendbuff[35] = "ATD";
@@ -507,72 +415,6 @@ boolean Adafruit_FONA::callPhone(char *number) {
   if (_type == SIM7500) sendCheckReply(F("AT+CSDVC=3"), ok_reply); // Enable speaker output
 
   return sendCheckReply(sendbuff, ok_reply);
-}
-
-
-uint8_t Adafruit_FONA::getCallStatus(void) {
-  uint16_t phoneStatus;
-
-  if (! sendParseReply(F("AT+CPAS"), F("+CPAS: "), &phoneStatus)) 
-    return FONA_CALL_FAILED; // 1, since 0 is actually a known, good reply
-
-  return phoneStatus;  // 0 ready, 2 unknown, 3 ringing, 4 call in progress
-}
-
-boolean Adafruit_FONA::hangUp(void) {
-  return sendCheckReply(F("ATH0"), ok_reply);
-}
-
-boolean Adafruit_FONA_LTE::hangUp(void) {
-  // return sendCheckReply(F("ATH"), ok_reply); // For SIM7500 this only works when AT+CVHU=0
-  return sendCheckReply(F("AT+CHUP"), ok_reply);
-}
-
-boolean Adafruit_FONA::pickUp(void) {
-  return sendCheckReply(F("ATA"), ok_reply);
-}
-
-void Adafruit_FONA::onIncomingCall() {
-
-  DEBUG_PRINT(F("> ")); DEBUG_PRINTLN(F("Incoming call..."));
-
-  Adafruit_FONA::_incomingCall = true;
-}
-
-boolean Adafruit_FONA::_incomingCall = false;
-
-boolean Adafruit_FONA::callerIdNotification(boolean enable, uint8_t interrupt) {
-  if(enable){
-    attachInterrupt(interrupt, onIncomingCall, FALLING);
-    return sendCheckReply(F("AT+CLIP=1"), ok_reply);
-  }
-
-  detachInterrupt(interrupt);
-  return sendCheckReply(F("AT+CLIP=0"), ok_reply);
-}
-
-boolean Adafruit_FONA::incomingCallNumber(char* phonenum) {
-  //+CLIP: "<incoming phone number>",145,"",0,"",0
-  if(!Adafruit_FONA::_incomingCall)
-    return false;
-
-  readline();
-  while(!prog_char_strcmp(replybuffer, (prog_char*)F("RING")) == 0) {
-    flushInput();
-    readline();
-  }
-
-  readline(); //reads incoming phone number line
-
-  parseReply(F("+CLIP: \""), phonenum, '"');
-
-
-  DEBUG_PRINT(F("Phone Number: "));
-  DEBUG_PRINTLN(replybuffer);
-
-
-  Adafruit_FONA::_incomingCall = false;
-  return true;
 }
 
 /********* SMS **********************************************************/
@@ -704,27 +546,26 @@ boolean Adafruit_FONA::sendSMS(const char *smsaddr, const char *smsmsg) {
   mySerial->print(smsmsg);
   mySerial->write(0x1A);
 
-  // DEBUG_PRINTLN("^Z");
+  DEBUG_PRINTLN("^Z");
 
   if ( (_type == SIM5320A) || (_type == SIM5320E) || (_type >= SIM7000) ) {
     // Eat two sets of CRLF
     readline(200);
-    //DEBUG_PRINT("Line 1: "); DEBUG_PRINTLN(strlen(replybuffer));
+    DEBUG_PRINT("Line 1: "); DEBUG_PRINTLN(strlen(replybuffer));
     readline(200);
-    //DEBUG_PRINT("Line 2: "); DEBUG_PRINTLN(strlen(replybuffer));
+    DEBUG_PRINT("Line 2: "); DEBUG_PRINTLN(strlen(replybuffer));
   }
   readline(30000); // read the +CMGS reply, wait up to 30s
-  //DEBUG_PRINT("Line 3: "); DEBUG_PRINTLN(strlen(replybuffer));
+  DEBUG_PRINT("Line 3: "); DEBUG_PRINTLN(strlen(replybuffer));
   if (strstr(replybuffer, "+CMGS") == 0) {
     return false;
   }
   readline(1000); // read OK
-  //DEBUG_PRINT("* "); DEBUG_PRINTLN(replybuffer);
+  DEBUG_PRINT("* "); DEBUG_PRINTLN(replybuffer);
 
   if (strcmp(replybuffer, "OK") != 0) {
     return false;
   }
-
   return true;
 }
 

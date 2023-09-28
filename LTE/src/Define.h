@@ -2,7 +2,8 @@
 #define  Define_H
 
 #define UPDATE_LOOP 1000
-#define DEBUG_LOOP 3000
+#define MQTT_UPDATE_LOOP 10000
+#define DEBUG_LOOP 10000
 #define LTE_LOOP 30000
 #define LTE_Test_LOOP 5000
 

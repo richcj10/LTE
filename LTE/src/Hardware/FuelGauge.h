@@ -11,7 +11,7 @@ float GetCellSoC();
 bool GetCellAlert();
 char GetFGerror();
 String GetCellVString();
-String GetCellSoCString();
+String GetCellSoCString(bool Round);
 String GetPowerModeString();
 
 #endif 
