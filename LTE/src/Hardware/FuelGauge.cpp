@@ -56,8 +56,8 @@ void FGDisplay(){
 		//Serial.print("Alert: ");
 		//Serial.println(alert);
 		//Serial.println();
-		Log(LOG," Cell V = %.1f\n",voltage);
-		Log(LOG," Cell SOC = %.1f\n",soc);
+		Log(LOG," Cell V = %.1f\n\r",voltage);
+		Log(LOG," Cell SOC = %.1f\n\r",soc);
 	}
 	else{
 		//Serial.print("No FG");
@@ -78,7 +78,15 @@ String GetCellVString(){
 	return String(voltage,2);
 }
 
-String GetCellSoCString(){
+String GetCellSoCString(bool Round){
+	if(Round == 1){
+		if(soc < 100.0){
+			return String(soc,2);
+		}
+		else{
+			return String(100.0,2);
+		}
+	}
 	return String(soc,2);
 }
 

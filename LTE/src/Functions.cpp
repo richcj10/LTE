@@ -9,23 +9,27 @@
 #include "Comunication/Webportal.h"
 #include "Comunication/Wifi.h"
 #include "FileSystem/FSInterface.h"
+#include "Comunication/MQTT.h"
 
 String UN = "";
 
-unsigned long UpdatePreviousMillis = 0;  
+unsigned long UpdatePreviousMillis = 0;
+unsigned long MQTTUpdatePreviousMillis = 0;
 unsigned long LTEPreviousMillis = 0;
 unsigned long DebugPreviousMillis = 0;
 unsigned long LTETestPreviousMillis = 0;
 
 char Startup(bool WifiEnable, bool LTEEnable){
     ConfigIO();
-    NetworkStop();
+    LEDsetup();
+    LEDColor(40);
+    NetworkReset();
     UniqueName();
     FileStstemStart();
-    LEDsetup();
     FGsetup(0);
     if(WifiEnable){
       WiFiNetworkSetup();
+      MQTTStart();
     }
     if(LTEEnable){
       LTEsetup();
@@ -59,6 +63,8 @@ String GetUniqueName(){
 
 void RunLoop(){
   WebHandel();
+  LEDUpdate();
+  MqttLoop();
   if (millis() - UpdatePreviousMillis >= UPDATE_LOOP) {
     UpdatePreviousMillis = millis();
     DebugLEDToggle();
@@ -66,12 +72,16 @@ void RunLoop(){
     NetworkStatusUpdate();
     UpdateTime();
   }
+  if (millis() - MQTTUpdatePreviousMillis >= MQTT_UPDATE_LOOP) {
+    MQTTUpdatePreviousMillis = millis();
+    MQTTMessageUpdate();
+  }
 }
 
 void LTELoop(){
-  if (millis() - LTEPreviousMillis >= LTE_LOOP) {
+   if (millis() - LTEPreviousMillis >= LTE_LOOP) {
     LTEPreviousMillis = millis();
-    LTEloop();
+    //LTEControl();
   }
   if (millis() - LTETestPreviousMillis >= LTE_Test_LOOP) {
     LTETestPreviousMillis = millis();

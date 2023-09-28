@@ -27,12 +27,17 @@ char URL[200];
 char BODY[200];
 
 bool LTEon = 0;
+char LTEMode = 0;
+char LTERequestedMode = 0;
 long i = 0;
 char counter = 0;
 char msg[200];
 char LTEerror = 0;
 char LTEStatus = 0;
+int8_t Rssi = 0;
 bool LTEConnected = 0;
+String Status = "N/A";
+
 
 void NetworkTest();
 String urlencode(String str);
@@ -43,7 +48,6 @@ void NetworkStop();
 #define TXD2 16
 
 void LTEsetup(){
-  LTEon = 1;
   pinMode(FONA_RST, OUTPUT);
   pinMode(FONA_PWRKEY, OUTPUT);
   digitalWrite(FONA_RST, LOW);
@@ -52,7 +56,7 @@ void LTEsetup(){
   fona.powerOn(FONA_PWRKEY); // Power on the module
   
   //Serial.println(F("Initializing....(May take several seconds)"));
-  Log(NOTIFY,"Starting LTE Radio");
+  Log(NOTIFY,"Starting LTE Radio\r\n");
 
   // Software serial:
   Serial1.begin(115200, SERIAL_8N1, RXD2, TXD2); // Default SIM7000 shield baud rate
@@ -65,48 +69,55 @@ void LTEsetup(){
   }
   else{
     type = fona.type();
-    Log(NOTIFY,"LTE Radio OK");
+    Log(NOTIFY,"LTE Radio OK\r\n");
+    LTEon = 1;
   }
 }
   
-void LTEloop() {
+void LTEControl() {
   if(LTEon){
     NetworkSetup();
     char ExistingColor = LEDGetValue();
-    LEDUpdate(150);
-    sprintf(msg, "Voltage = %f SoC = %f",GetCellV(),GetCellSoC());
+    LEDColor(150);
+    sprintf(msg, "Voltage = %0.1f SoC = %0.1f",GetCellV(),GetCellSoC());
     Pushover("Battery Status",msg);
-    LEDUpdate(ExistingColor);
+    LEDColor(ExistingColor);
     NetworkStop();
+    delay(100);
+    //SendTextMsg();
   }
   else{
     LTEsetup();
     NetworkSetup();
     char ExistingColor = LEDGetValue();
-    LEDUpdate(150);
-    sprintf(msg, "Voltage = %f SoC = %f",GetCellV(),GetCellSoC());
+    LEDColor(150);
+    sprintf(msg, "Voltage = %0.2f SoC = %0.2f",GetCellV(),GetCellSoC());
     if(Pushover("Battery Status",msg)){
-      LEDUpdate(96);
+      LEDColor(96);
       delay(100);
     }
-    LEDUpdate(ExistingColor);
+    LEDColor(ExistingColor);
     NetworkStop();
+    delay(100);
+    //SendTextMsg();
   }
 }
 
 void NetworkSetup(){
   if(LTEerror == 0){
     LTEConnected = 1;
+    //Log(NOTIFY,"Holo\n");
     fona.setNetworkSettings(F("hologram")); // For Hologram SIM card
     delay(1000);
     fona.enableGPRS(true);
+    CheckSIM();
     if (!fona.wirelessConnStatus()) {
       while (!fona.openWirelessConnection(true)) {
         //Serial.println(F("Failed to enable connection, retrying..."));
         Log(NOTIFY,"LTE Connection Retry\n");
         delay(1000); // Retry every 2s
         counter++;
-        if(counter > 12){
+        if(counter > 24){
           Log(ERROR,"LTE Connection Fail\n");
           LTEConnected = 0;
           NetworkStop();
@@ -129,49 +140,117 @@ void NetworkStatusUpdate(){
 }
 
 void NetworkStop(){
+  if(LTEon == 1){
+    fona.enableGPRS(false);
+  }
+  //digitalWrite(FONA_RST, LOW);
+  //delay(1000);
+  //digitalWrite(FONA_RST, HIGH);
+  //counter = 0;
+  LTEStatus = 0;
+}
+
+void NetworkReset(){
+  if(LTEon == 1){
+    fona.enableGPRS(false);
+  }
+  delay(1000);
   digitalWrite(FONA_RST, LOW);
   delay(1000);
   digitalWrite(FONA_RST, HIGH);
   counter = 0;
-  LTEon = 0;
+  LTEStatus = 0;
 }
 
 char CheckSIM(){
   char CCID[32];
   int Lenth = fona.getSIMCCID(CCID);
+  for(char i = 0;i< Lenth;i++){
+    Serial.print(CCID[i]);
+  }
+  Serial.println();
   return 0;
 }
 
 void NetworkTest(){
   if(LTEon){
     LTEStatus = fona.GPRSstate();
-    Serial.print(F("Network status "));
-    Serial.print(LTEStatus);
-    Serial.print(F(": "));
-    if (LTEStatus == 0) Serial.println(F("Not registered"));
-    if (LTEStatus == 1) Serial.println(F("Registered (home)"));
-    if (LTEStatus == 2) Serial.println(F("Not registered (searching)"));
-    if (LTEStatus == 3) Serial.println(F("Denied"));
-    if (LTEStatus == 4) Serial.println(F("Unknown"));
-    if (LTEStatus == 5) Serial.println(F("Registered roaming"));
+    uint8_t n = fona.getRSSI();
+
+    //Serial.print(F("RSSI = ")); Serial.print(n); Serial.print(": ");
+    if (n == 0) Rssi = -115;
+    if (n == 1) Rssi = -111;
+    if (n == 31) Rssi = -52;
+    if ((n >= 2) && (n <= 30)) {
+      Rssi = map(n, 2, 30, -110, -54);
+    }
+    //Serial.print(r); Serial.println(F(" dBm"));
+    //Serial.print(F(": "));
+    if (LTEStatus == 0){
+      Status = "Not registered\r\n";
+      //Serial.println(F("Not registered"));
+    }
+    if (LTEStatus == 1){
+      Status = "Registered (home)\r\n";
+      //Serial.println(F("Registered (home)"));
+    }
+    if (LTEStatus == 2){
+      Status = "Not registered (searching)\r\n";
+      //Serial.println(F("Not registered (searching)"));
+    }
+    if (LTEStatus == 3){
+      Status = "Denied\r\n";
+      //Serial.println(F("Denied"));
+    }
+    if (LTEStatus == 4){
+      Status = "Unknown\r\n";
+      //Serial.println(F("Unknown"));
+    }
+    if (LTEStatus == 5){
+      Status = "Registered roaming\r\n";
+      //Serial.println(F("Registered roaming"));
+    }
+  }
+}
+
+char CellStateController(){
+  switch(LTEMode){
+    case 1:
+      break;
+    case 2:
+      break;
+    case 3:
+      break; 
   }
 }
 
 bool Pushover(const char* Title, const char* Message){
+  SetLEDStatus(LED_DEFAULT);
+  char ExistingColor = LEDGetValue();
+  LEDColor(150);
+  if(!LTEon){
+    LTEsetup();
+  }
+  NetworkSetup();
   if(LTEConnected){
-    Log(NOTIFY,"POVR Sending");
+    //Log(NOTIFY,"POVR Sending");
     sprintf(URL, "api.pushover.net");
     fona.HTTP_ssl(true);
     fona.HTTP_connect(URL);
+    //Serial.println(Title);
     int SizeOfArray = sprintf(BODY, "token=ax54xhwax8om6q4hwtjxfa7qatanjc&user=ufi8weo5covwibzqg1a6iuzhpj1r3q&title=%s&message=%s",urlencode(Title).c_str(),urlencode(Message).c_str());
     //Serial.print("Array Body = ");Serial.println(SizeOfArray);
     //Serial.print("Array Body = ");Serial.println(BODY);
     char value = fona.HTTP_POST("/1/messages.json",BODY,SizeOfArray,4000);
-    Log(NOTIFY,"POVR Sent, Result = %d",value);
+    Log(NOTIFY,"PSOVR Sent, Result = %d",value);
+    NetworkStop();
+    LEDColor(ExistingColor);
     return 1;
   }
   else{
     Log(ERROR,"POVR: No LTE Con");
+    NetworkStop();
+    LEDColor(ExistingColor);
     return 0;
   }
 }
@@ -193,6 +272,11 @@ bool Pushsafer(const char* Title, const char* Message){
     Log(ERROR,"PSVR: No LTE Con");
     return 0;
   }
+}
+
+bool SendTextMsg(){
+  //fona.sendSMS((char *)"13306049357", (char *)"Hey, I got your text!");
+  return 0;
 }
 
 String urlencode(String str){
@@ -233,26 +317,7 @@ void CellularDisplay(){
   if(LTEon){
     Log(LOG,"LTE: ON\n");
     Log(LOG,"LTE: Connected = %d\n",LTEConnected);
-    switch (LTEStatus){
-        case 0:
-            Log(LOG,"Not Registered\n");
-            break;
-        case 1:
-            Log(LOG,"Registered (home)\n");
-            break;
-        case 2:
-            Log(LOG,"Not registered (searching)\n");
-            break;
-        case 3:
-            Log(LOG,"Denied\n");
-            break;
-        case 4:
-            Log(LOG,"Unknown\n");
-            break;
-        case 5:
-            Log(LOG,"Registered roaming\n");
-            break;
-    }
+    Log(LOG,Status.c_str());
   }
   else{
     Log(LOG,"LTE: OFF\n");
@@ -260,7 +325,7 @@ void CellularDisplay(){
 }
 
 String CellStatString(){
-  return "Active";
+  return Status;
 }
 
 String CellSIMString(){
@@ -268,7 +333,11 @@ String CellSIMString(){
 }
 
 String CellSigString(){
-  return "-78";
+  return String(Rssi);
+}
+
+int8_t CellSig(){
+  return Rssi;
 }
 
 String CellNetworkString(){

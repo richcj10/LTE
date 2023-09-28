@@ -9,13 +9,14 @@ WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP, "3.north-america.pool.ntp.org", 3600, 60000);
 
 const char *soft_ap_password = "LTEAP";
-const char* ssid = "Lights.Camera.Action";
-const char* password = "RR58fa!8";
+const char* ssid = "JohnsonCamper-2.4G";
+const char* password = "LoveShack0nWheels";
 //const char* ssid = "EnovateEng";
 //const char* password = "WirelessENG4u";
 
 int WiFiTimeout = 0;
 bool HaveWiFi = 0;
+char status = 0;
 IPAddress CurrentIP;
 
 char WiFiSetup(){
@@ -34,7 +35,8 @@ char WiFiSetup(){
   HaveWiFi = 1;
   CurrentIP = WiFi.localIP();
   timeClient.begin();
-  Log(NOTIFY,"Connected to Wifi, The IP Address is :%d.%d.%d.%d\n", CurrentIP[0], CurrentIP[1], CurrentIP[2], CurrentIP[3]);
+  Log(NOTIFY,"Connected to Wifi, The IP Address is :%d.%d.%d.%d\r\n", CurrentIP[0], CurrentIP[1], CurrentIP[2], CurrentIP[3]);
+  status = 1;
   return 1;
 }
 
@@ -58,6 +60,10 @@ char CheckTime(char hour,char minute){
   else{
     return -1;
   } 
+}
+
+char GetWiFiStatus(){
+  return status;
 }
 
 String GetIP(){

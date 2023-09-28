@@ -10,5 +10,6 @@ String GetRSSIStr();
 void UpdateTime();
 void PrintTime();
 char CheckTime(char hour,char minute);
+char GetWiFiStatus();
 
 #endif 

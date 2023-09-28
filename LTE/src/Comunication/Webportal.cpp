@@ -92,7 +92,7 @@ void WebStart(){
   /* Start web server and web socket server */
   //lastButtonState = digitalRead(USER_SW);
   /* Start web server and web socket server */
-  Log(NOTIFY,"Web Service Start!\r");
+  Log(NOTIFY,"Web Service Start!\r\n");
    server.on("/", HTTP_GET, [](AsyncWebServerRequest* request) {
     Serial.print("Root Page");
     //request->send(200, "text/html", "OK");
@@ -136,7 +136,7 @@ void WebHandel(){
 
       if(JsonType == 3){
         jsonDocTx["BATV"] = GetCellVString();
-        jsonDocTx["BATP"] = GetCellSoCString();
+        jsonDocTx["BATP"] = GetCellSoCString(0);
         jsonDocTx["PWRMD"] = GetPowerModeString();
         Firstupdate = 0;
         WebHandelTime = 500;
