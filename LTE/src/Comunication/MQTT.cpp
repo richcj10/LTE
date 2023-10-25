@@ -34,8 +34,9 @@ void callback(char* topic, byte* payload, unsigned int length) {
     //Serial.println("CellMsg");
     deserializeJson(jsonmqttRx, payload);
     //Serial.println("jSON PARSE");
-    const char* MsgTxLoc = jsonmqttRx["Loc"];
+    //const char* MsgTxLoc = jsonmqttRx["Loc"];
     const char* MsgTitle = jsonmqttRx["Title"];
+    const char* MsgTxLoc = jsonmqttRx["Loc"];
     const char* Msg = jsonmqttRx["Msg"];
     Serial.print("Message title ");
     Serial.print(MsgTitle);
