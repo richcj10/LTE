@@ -37,6 +37,8 @@ void RS485setup() {
 
 void RS485loop() {
     /* ── Push current device state into input registers ─────────────── */
+    modbus.setInput(RS485_INP_VERSION,     RS485_DEVICE_VERSION);
+    modbus.setInput(RS485_INP_DEVICE_ID,   RS485_DEVICE_ID);
     modbus.setInput(RS485_INP_BATT_SOC,    (uint16_t)(GetCellSoC()   * 100.0f));
     modbus.setInput(RS485_INP_BATT_V,      (uint16_t)(GetCellV()     * 100.0f));
     modbus.setInput(RS485_INP_BATT_RATE,   (uint16_t)((int16_t)(GetCellRate() * 10.0f)));
@@ -77,14 +79,16 @@ void RS485loop() {
     /* ── Snapshot writable state before processing ───────────────────── */
     bool     prevCellEn  = modbus.getCoil(RS485_COIL_CELL_ENABLE);
     bool     prevGpsEn   = modbus.getCoil(RS485_COIL_GPS_ENABLE);
+    bool     prevSendMsg = modbus.getCoil(RS485_COIL_SEND_MSG);
     uint16_t prevFlags   = modbus.getHolding(RS485_HOLD_FLAGS);
 
     /* ── Process one Modbus frame ─────────────────────────────────────── */
     modbus.update();
 
     /* ── Detect writes from master and log descriptive events ────────── */
-    bool newCellEn = modbus.getCoil(RS485_COIL_CELL_ENABLE);
-    bool newGpsEn  = modbus.getCoil(RS485_COIL_GPS_ENABLE);
+    bool newCellEn  = modbus.getCoil(RS485_COIL_CELL_ENABLE);
+    bool newGpsEn   = modbus.getCoil(RS485_COIL_GPS_ENABLE);
+    bool newSendMsg = modbus.getCoil(RS485_COIL_SEND_MSG);
     uint16_t newFlags = modbus.getHolding(RS485_HOLD_FLAGS);
 
     if (newCellEn != prevCellEn)
@@ -94,6 +98,23 @@ void RS485loop() {
     if (newFlags != prevFlags)
         pushEvent(String("Flags written: 0x") + String(newFlags, HEX) +
                   (newFlags & 0x01 ? " (serial debug ON)" : " (serial debug OFF)"));
+
+    /* ── RS485 → Pushover message (rising edge on COIL_SEND_MSG) ──────── */
+    if (newSendMsg && !prevSendMsg) {
+        /* Unpack 20 holding registers into a 40-char string.
+           Each register: high byte = even char, low byte = odd char. */
+        char msgBuf[41] = {0};
+        for (uint8_t i = 0; i < RS485_HOLD_MSG_LEN; i++) {
+            uint16_t reg = modbus.getHolding(RS485_HOLD_MSG_0 + i);
+            msgBuf[i * 2]     = (char)(reg >> 8);
+            msgBuf[i * 2 + 1] = (char)(reg & 0xFF);
+        }
+        msgBuf[40] = '\0';
+        Log(NOTIFY, "RS485 msg → Pushover: %s\n", msgBuf);
+        pushEvent(String("Msg: ") + msgBuf);
+        Pushover("RS485 Message", msgBuf);
+        modbus.setCoil(RS485_COIL_SEND_MSG, false);   /* clear trigger */
+    }
 
     /* ── Apply control flags ─────────────────────────────────────────── */
     SetSerialLog(newFlags & 0x01);
