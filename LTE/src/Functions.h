@@ -7,7 +7,6 @@ char Startup(bool WifiMode, bool LTEMode);
 void RunLoop();
 void DebugPrint();
 void UniqueName();
-void WiFiNetworkSetup();
 void LTELoop();
 String GetUniqueName();
 

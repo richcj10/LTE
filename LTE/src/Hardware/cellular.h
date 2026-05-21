@@ -1,28 +1,40 @@
 #ifndef CELLULAR_H
-#define  CELLULAR_H
+#define CELLULAR_H
 
 #include <Arduino.h>
 
-void LTEsetup();
-void LTEControl();
-bool Pushover(const char* Title, const char* Message);
-bool Pushsafer(const char* Title, const char* Message);
-void NetworkSetup();
-void NetworkTest();
-void NetworkStop();
-void NetworkReset();
-void CellularDisplay();
-void NetworkStatusUpdate();
-char CheckSIM();
-bool SendTextMsg();
+/* Start the FreeRTOS cellular task — call once in setup() */
+void CellTaskStart();
+
+/* Non-blocking Pushover — queues the notification, returns true if queued */
+bool Pushover(const char* title, const char* message);
+
+/* GPS control */
+void   GPSenable(bool on);
+bool   GPSisEnabled();
+bool   GPShasFix();
+float  GPSlat();
+float  GPSlon();
+float  GPSspeed();
+float  GPSheading();
+float  GPSaltitude();
+String GPSlatString();
+String GPSlonString();
+
+/* State accessors (thread-safe) */
+bool   CellIsOn();
+bool   CellIsConnected();
+int8_t CellSig();
+String CellStateStr();
 String CellStatString();
+String CellSIMString();
 String CellSigString();
 String CellNetworkString();
 String CellIPString();
-String CellSIMString();
 String CellGPSString();
 String CellLATString();
-String CellLOGString();
-int8_t CellSig();
+String CellLONString();
+void   CellularDisplay();
+bool   SendTextMsg();
 
-#endif 
+#endif

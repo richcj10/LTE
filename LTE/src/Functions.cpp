@@ -3,97 +3,110 @@
 #include "Hardware/LED.h"
 #include "Hardware/FuelGauge.h"
 #include "Hardware/cellular.h"
+#include "Hardware/RS485.h"
 #include "Define.h"
 #include "Hardware/Log.h"
 #include "Hardware/IO.h"
 #include "Comunication/Webportal.h"
 #include "Comunication/Wifi.h"
+#include "Comunication/OTA.h"
 #include "FileSystem/FSInterface.h"
 #include "Comunication/MQTT.h"
 
 String UN = "";
 
-unsigned long UpdatePreviousMillis = 0;
+unsigned long UpdatePreviousMillis     = 0;
 unsigned long MQTTUpdatePreviousMillis = 0;
-unsigned long LTEPreviousMillis = 0;
-unsigned long DebugPreviousMillis = 0;
-unsigned long LTETestPreviousMillis = 0;
+unsigned long DebugPreviousMillis      = 0;
+unsigned long WiFipreviousMillis       = 0;
+unsigned long RS485PreviousMillis      = 0;
+
+char WiFiErrorCount = 0;
+char lastPowerMode  = ACON;
 
 char Startup(bool WifiEnable, bool LTEEnable){
     ConfigIO();
     LEDsetup();
     LEDColor(40);
-    NetworkReset();
     UniqueName();
     FileStstemStart();
     FGsetup(0);
-    if(WifiEnable){
-      WiFiNetworkSetup();
-      MQTTStart();
+    if (GetRS485Mode()) {
+        RS485setup();
+    } else {
+        Serial.begin(115200);
+        SetSerialLog(true);
     }
-    if(LTEEnable){
-      LTEsetup();
+    if (WifiEnable) {
+        if (WiFiBootSequence() == 1) {
+            WebStart();
+            OTAsetup();
+            MQTTStart();
+        }
+    }
+    if (LTEEnable) {
+        CellTaskStart();
     }
     return 1;
 }
 
-void WiFiNetworkSetup(){
-  if(WiFiSetup() != -1){
-    WebStart();
-  }
-}
 
 void UniqueName(){
-  String Mac = WiFi.macAddress();
-  //Serial.println(Mac);
-  int Len = Mac.length();
-  UN = "ESPPLC-LTE-";
-  UN = UN + Mac.charAt(Len - 5);
-  UN = UN + Mac.charAt(Len - 4);
-  UN = UN + Mac.charAt(Len - 3);
-  UN = UN + Mac.charAt(Len - 2);
-  UN = UN + Mac.charAt(Len-1);
-  Serial.println();
-  Serial.println(UN);
+    String Mac = WiFi.macAddress();
+    int Len = Mac.length();
+    UN = "ESPPLC-LTE-";
+    UN += Mac.charAt(Len - 5);
+    UN += Mac.charAt(Len - 4);
+    UN += Mac.charAt(Len - 3);
+    UN += Mac.charAt(Len - 2);
+    UN += Mac.charAt(Len - 1);
+    Log(LOG, "Device: %s\n", UN.c_str());
 }
 
 String GetUniqueName(){
-  return UN;
+    return UN;
 }
 
 void RunLoop(){
-  WebHandel();
-  LEDUpdate();
-  MqttLoop();
-  if (millis() - UpdatePreviousMillis >= UPDATE_LOOP) {
-    UpdatePreviousMillis = millis();
-    DebugLEDToggle();
-    FGloop();
-    NetworkStatusUpdate();
-    UpdateTime();
-  }
-  if (millis() - MQTTUpdatePreviousMillis >= MQTT_UPDATE_LOOP) {
-    MQTTUpdatePreviousMillis = millis();
-    MQTTMessageUpdate();
-  }
-}
+    OTAloop();
+    WebHandel();
+    LEDUpdate();
+    MqttLoop();
 
-void LTELoop(){
-   if (millis() - LTEPreviousMillis >= LTE_LOOP) {
-    LTEPreviousMillis = millis();
-    //LTEControl();
-  }
-  if (millis() - LTETestPreviousMillis >= LTE_Test_LOOP) {
-    LTETestPreviousMillis = millis();
-    NetworkTest();
-  }
+    if (GetRS485Mode()) RS485loop();
+
+    if (millis() - UpdatePreviousMillis >= UPDATE_LOOP) {
+        UpdatePreviousMillis = millis();
+        DebugLEDToggle();
+        FGloop();
+        UpdateTime();
+        if ((GetPowerMode() == BUBON) && (lastPowerMode == ACON)) {
+            lastPowerMode = BUBON;
+            Pushover("LTE Modem", "Lost Power!");
+        }
+        if ((GetPowerMode() == ACON) && (lastPowerMode == BUBON)) {
+            lastPowerMode = ACON;
+            Pushover("LTE Modem", "Power Restored!");
+        }
+    }
+
+    if (millis() - MQTTUpdatePreviousMillis >= MQTT_UPDATE_LOOP) {
+        MQTTUpdatePreviousMillis = millis();
+        if (WiFi.status() != WL_CONNECTED) {
+            WiFi.disconnect();
+            WiFi.reconnect();
+            WiFiErrorCount++;
+            if (WiFiErrorCount > 3) ESP.restart();
+        }
+        MQTTMessageUpdate();
+    }
 }
 
 void DebugPrint(){
-  if (millis() - DebugPreviousMillis >= DEBUG_LOOP) {
-    DebugPreviousMillis = millis();
-    FGDisplay();
-    CellularDisplay();
-    PrintTime();
-  }
+    if (millis() - DebugPreviousMillis >= DEBUG_LOOP) {
+        DebugPreviousMillis = millis();
+        FGDisplay();
+        CellularDisplay();
+        PrintTime();
+    }
 }

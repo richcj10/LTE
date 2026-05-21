@@ -1,0 +1,5 @@
+{
+  "enabled": 1,
+  "token": "**REDACTED-PUSHOVER-TOKEN**",
+  "userKey": "**REDACTED-PUSHOVER-USERKEY**"
+}

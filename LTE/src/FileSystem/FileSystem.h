@@ -1,15 +1,33 @@
 #ifndef FILESYSTEM_H
 #define  FILESYSTEM_H
 
-char FileSystemInit(struct WiFiConfig* WFC,struct MQTTConfig* MQC);
+#include <Preferences.h>
+
+struct SystemConfig {
+  bool rs485Mode = false;   /* true = RS485/Modbus on UART0, false = serial debug */
+};
+
+char FileSystemInit(struct WiFiConfig* WFC, struct MQTTConfig* MQC, struct SystemConfig* SC, struct PushoverConfig* PVC);
+
+/* NVS (Non-Volatile Storage) — primary config store for WiFi and MQTT */
+bool NVSloadWifi(struct WiFiConfig* WFC);   /* true if NVS had valid creds */
+void NVSsaveWifi(struct WiFiConfig* WFC);
+bool NVSloadMQTT(struct MQTTConfig* MQC);   /* true if NVS had valid entry  */
+void NVSsaveMQTT(struct MQTTConfig* MQC);
+
+void SystemsaveConfiguration(struct SystemConfig* SC);
+void SystemloadConfiguration(struct SystemConfig* SC);
 void WifisaveConfiguration(struct WiFiConfig* WFC);
 void WifiloadConfiguration(struct WiFiConfig* WFC);
 void MqttsaveConfiguration(struct MQTTConfig* MQC);
 void MqttloadConfiguration(struct MQTTConfig* MQC);
+void PushoversaveConfiguration(struct PushoverConfig* PVC);
+void PushoverloadConfiguration(struct PushoverConfig* PVC);
 void PrintWiFiConfigStruct(struct WiFiConfig* WFC);
 void PrintMqttConfigStruct(struct MQTTConfig* MQC);
 void WifiComfig(struct WiFiConfig* WFC);
 void MqttComfig(struct MQTTConfig* MQC);
+void PushoverComfig(struct PushoverConfig* PVC);
 void SaveHostName(struct WiFiConfig* WFC);
 
 struct WiFiConfig {
@@ -28,9 +46,17 @@ struct WiFiConfig {
 
 struct MQTTConfig {
   unsigned char MQTTEnabble = 1;
-  char MQTTIP[16] = "000.000.000.000";;
-  char MQTTPassword[40] = "Stuff";
-  unsigned char MQTTPasswordLN = 5;
+  char MQTTIP[16]       = "192.168.X.X";
+  unsigned int  MQTTPort = 1883;
+  char MQTTUser[32]     = "ESPPLCCell";
+  char MQTTPassword[40] = "**REDACTED-MQTT-PASS**";
+  unsigned char MQTTPasswordLN = 10;
+};
+
+struct PushoverConfig {
+  unsigned char enabled = 0;
+  char token[48]   = "";
+  char userKey[48] = "";
 };
 
 

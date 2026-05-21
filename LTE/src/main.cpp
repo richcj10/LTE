@@ -28,7 +28,6 @@ void setup() {
 
 void loop(){
   RunLoop();
-  LTELoop();
   DebugPrint();
   // put your main code here, to run repeatedly:
 }

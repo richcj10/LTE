@@ -6,6 +6,10 @@
 
 bool ConfigArray[5] = {1,1,1,1,0};
 bool WiFiLog = 0;
+bool SerialEnabled = false;  /* off by default — RS485 owns UART0 */
+
+void SetSerialLog(bool enable) { SerialEnabled = enable; }
+bool GetSerialLog() { return SerialEnabled; }
 
 void LogSetup(char DebugLevel, bool WebPage){
     switch (DebugLevel){
@@ -39,46 +43,22 @@ void LogSetup(char DebugLevel, bool WebPage){
     }
 }
 
-char Log(char level,const char* format, ...){
-    switch (level){
-        case ERROR:
-            if(ConfigArray[0] == 1){
-                ets_printf("%s", "ERR>");
-            }
-            else{
-                return 0; 
-            }
-            break;
-        case LOG:
-            if(ConfigArray[1] == 1){
-                ets_printf("%s", "LOG>");
-            }
-            else{
-                return 0; 
-            }
-            break;
-        case NOTIFY:
-            if(ConfigArray[2] == 1){
-                ets_printf("%s", "NOTFY>");
-            }
-            else{
-                return 0; 
-            }
-            break;
-        case DEBUG:
-            if(ConfigArray[3] == 1){
-                ets_printf("%s", "DEBUG>");
-            }
-            else{
-                return 0; 
-            }
-            break;
-        default:
-            ets_printf("%s", "ALT>");
-            break;
+char Log(char level, const char* format, ...) {
+    bool levelEnabled = false;
+    const char* prefix = "ALT>";
+
+    switch (level) {
+        case ERROR:  levelEnabled = ConfigArray[0]; prefix = "ERR>";   break;
+        case LOG:    levelEnabled = ConfigArray[1]; prefix = "LOG>";   break;
+        case NOTIFY: levelEnabled = ConfigArray[2]; prefix = "NOTFY>"; break;
+        case DEBUG:  levelEnabled = ConfigArray[3]; prefix = "DEBUG>"; break;
+        default: break;
     }
+
+    if (!levelEnabled && level != 0) return 0;
+
     static char loc_buf[64];
-    char * temp = loc_buf;
+    char* temp = loc_buf;
     int len;
     va_list arg;
     va_list copy;
@@ -86,24 +66,21 @@ char Log(char level,const char* format, ...){
     va_copy(copy, arg);
     len = vsnprintf(NULL, 0, format, copy);
     va_end(copy);
-    if(len >= sizeof(loc_buf)){
-        temp = (char*)malloc(len+1);
-        if(temp == NULL) {
-            va_end(arg);
-            //return 0;
-        }
+    if (len >= (int)sizeof(loc_buf)) {
+        temp = (char*)malloc(len + 1);
+        if (temp == NULL) { va_end(arg); return 0; }
     }
-    
-    vsnprintf(temp, len+1, format, arg);
+    vsnprintf(temp, len + 1, format, arg);
+    va_end(arg);
 
-    ets_printf("%s", temp);
-    if(WiFiLog){
-        String s = temp;
+    if (SerialEnabled) {
+        ets_printf("%s%s", prefix, temp);
+    }
+    if (WiFiLog) {
+        String s = String(prefix) + temp;
         WebLogSend(s);
     }
-    va_end(arg);
-    if(len >= sizeof(loc_buf)){
-        free(temp);
-    }
+
+    if (len >= (int)sizeof(loc_buf)) free(temp);
     return 0;
 }

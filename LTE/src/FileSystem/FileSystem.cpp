@@ -1,6 +1,7 @@
 #include "FileSystem.h"
 #include <Arduino.h>
 #include <ArduinoJson.h>
+#include <Preferences.h>
 #include "Define.h"
 #include "Functions.h"
 #include "FS.h"
@@ -10,29 +11,142 @@
 
 #define FORMAT_LITTLEFS_IF_FAILED true
 
-const char *WiFifilename = "/WiFiconfig.json";  // <- SD library uses 8.3 filenames
-const char *MQTTfilename = "/MQTTconfig.json";  // <- SD library uses 8.3 filenames
-const char *MQTTTopicsfilename = "/MQTTcTopics.json";  // <- SD library uses 8.3 filenames
-const char *Remotefilename = "/Remote.json";  // <- SD library uses 8.3 filenames
+const char *WiFifilename      = "/WiFiconfig.json";
+const char *MQTTfilename      = "/MQTTconfig.json";
+const char *Systemfilename    = "/system.json";
+const char *Pushoverfilename  = "/Pushoverconfig.json";
+const char *MQTTTopicsfilename = "/MQTTcTopics.json";
+const char *Remotefilename    = "/Remote.json";
 
 void listDir(fs::FS &fs, const char * dirname, uint8_t levels);
 void writeFile(fs::FS &fs, const char * path, const char * message);
 
 bool DefaultsLoaded = 0;
 
-char FileSystemInit(struct WiFiConfig* WFC,struct MQTTConfig* MQC){\
+// ── NVS load / save ───────────────────────────────────────────
+bool NVSloadWifi(struct WiFiConfig* WFC) {
+  Preferences p;
+  p.begin("wifi", true);
+  String ssid = p.getString("ssid", "");
+  p.end();
+  if (ssid.length() == 0) return false;
+  p.begin("wifi", true);
+  strlcpy(WFC->SSID,    ssid.c_str(),                      sizeof(WFC->SSID));
+  WFC->SSIDLN = ssid.length();
+  String pass = p.getString("pass", "");
+  strlcpy(WFC->Passcode, pass.c_str(),                     sizeof(WFC->Passcode));
+  WFC->PswdLN = pass.length();
+  String host = p.getString("host", WFC->Host);
+  strlcpy(WFC->Host,    host.c_str(),                      sizeof(WFC->Host));
+  WFC->HoastLN = host.length();
+  WFC->DHCP     = p.getUChar("dhcp", WFC->DHCP);
+  WFC->WIFIMode = p.getUChar("mode", WFC->WIFIMode);
+  p.end();
+  return true;
+}
+
+void NVSsaveWifi(struct WiFiConfig* WFC) {
+  Preferences p;
+  p.begin("wifi", false);
+  p.putString("ssid", WFC->SSID);
+  p.putString("pass", WFC->Passcode);
+  p.putString("host", WFC->Host);
+  p.putUChar("dhcp",  WFC->DHCP);
+  p.putUChar("mode",  WFC->WIFIMode);
+  p.end();
+  Log(LOG, "NVS: WiFi saved (ssid=%s)\n", WFC->SSID);
+}
+
+bool NVSloadMQTT(struct MQTTConfig* MQC) {
+  Preferences p;
+  p.begin("mqtt", true);
+  String ip = p.getString("ip", "");
+  p.end();
+  if (ip.length() == 0) return false;
+  p.begin("mqtt", true);
+  strlcpy(MQC->MQTTIP,       ip.c_str(),                    sizeof(MQC->MQTTIP));
+  MQC->MQTTPort     = p.getUInt("port",  MQC->MQTTPort);
+  MQC->MQTTEnabble  = p.getUChar("en",   MQC->MQTTEnabble);
+  String user = p.getString("user", "");
+  strlcpy(MQC->MQTTUser,     user.c_str(),                  sizeof(MQC->MQTTUser));
+  String pass = p.getString("pass", "");
+  strlcpy(MQC->MQTTPassword, pass.c_str(),                  sizeof(MQC->MQTTPassword));
+  MQC->MQTTPasswordLN = pass.length();
+  p.end();
+  return true;
+}
+
+void NVSsaveMQTT(struct MQTTConfig* MQC) {
+  Preferences p;
+  p.begin("mqtt", false);
+  p.putString("ip",   MQC->MQTTIP);
+  p.putUInt("port",   MQC->MQTTPort);
+  p.putUChar("en",    MQC->MQTTEnabble);
+  p.putString("user", MQC->MQTTUser);
+  p.putString("pass", MQC->MQTTPassword);
+  p.end();
+  Log(LOG, "NVS: MQTT saved (ip=%s port=%d)\n", MQC->MQTTIP, MQC->MQTTPort);
+}
+
+char FileSystemInit(struct WiFiConfig* WFC, struct MQTTConfig* MQC, struct SystemConfig* SC, struct PushoverConfig* PVC){
   if(!LittleFS.begin(FORMAT_LITTLEFS_IF_FAILED)){
-    Serial.println("LittleFS Mount Failed");
+    Log(ERROR, "LittleFS Mount Failed\n");
     return 0;
   }
-  else{
-    listDir(LittleFS, "/", 0);
-    //LOG(" Config Check \r"); 
-    // Serial.println(F(" Config Check   ")); 
-    WifiComfig(WFC);
-    MqttComfig(MQC);
-    PrintWiFiConfigStruct(WFC);
-    return 1;
+  listDir(LittleFS, "/", 0);
+
+  /* ── WiFi: NVS → JSON file → AP mode ───────────────────────────
+     Priority: NVS first. If empty, import from JSON file and save to
+     NVS so future boots use NVS directly. If neither exists, signal
+     that AP mode is needed (return 2). */
+  if (NVSloadWifi(WFC)) {
+    Log(NOTIFY, "WiFi: config from NVS (ssid=%s)\n", WFC->SSID);
+  } else if (LittleFS.exists(WiFifilename)) {
+    Log(NOTIFY, "WiFi: importing JSON → NVS\n");
+    WifiloadConfiguration(WFC);
+    NVSsaveWifi(WFC);
+  } else {
+    Log(NOTIFY, "WiFi: no config found — AP mode needed\n");
+    /* Still load MQTT/Pushover/system so they're available after AP setup */
+    PushoverComfig(PVC);
+    SystemloadConfiguration(SC);
+    return 2;   /* caller must start AP mode */
+  }
+
+  /* ── MQTT: NVS → JSON file → defaults (not fatal) ─────────────── */
+  if (NVSloadMQTT(MQC)) {
+    Log(NOTIFY, "MQTT: config from NVS (ip=%s)\n", MQC->MQTTIP);
+  } else if (LittleFS.exists(MQTTfilename)) {
+    Log(NOTIFY, "MQTT: importing JSON → NVS\n");
+    MqttloadConfiguration(MQC);
+    NVSsaveMQTT(MQC);
+  } else {
+    Log(NOTIFY, "MQTT: no config, using defaults\n");
+  }
+
+  PushoverComfig(PVC);
+  SystemloadConfiguration(SC);
+  PrintWiFiConfigStruct(WFC);
+  return 1;
+}
+
+void SystemloadConfiguration(struct SystemConfig* SC) {
+  if (!LittleFS.exists(Systemfilename)) return;  /* keep defaults if no file */
+  File file = LittleFS.open(Systemfilename);
+  StaticJsonDocument<64> doc;
+  if (deserializeJson(doc, file) == DeserializationError::Ok)
+    SC->rs485Mode = doc["rs485"] | false;
+  file.close();
+}
+
+void SystemsaveConfiguration(struct SystemConfig* SC) {
+  LittleFS.remove(Systemfilename);
+  File file = LittleFS.open(Systemfilename, "w");
+  if (file) {
+    StaticJsonDocument<64> doc;
+    doc["rs485"] = SC->rs485Mode;
+    serializeJson(doc, file);
+    file.close();
   }
 }
 
@@ -133,7 +247,7 @@ void WifiloadConfiguration(struct WiFiConfig* WFC) {
   }
 }
 
-// Saves the configuration to a file
+// Saves the configuration to LittleFS AND NVS
 void WifisaveConfiguration(struct WiFiConfig* WFC) {
   // Delete old file for updating.
   LittleFS.remove(WiFifilename);
@@ -167,160 +281,103 @@ void WifisaveConfiguration(struct WiFiConfig* WFC) {
     doc["SubMask"] =  WFC->SubMask;
     // Serialize JSON to file
     //serializeJsonPretty(doc, Serial);
-    if (serializeJson(doc, file) == 0) {
-      Serial.println(F("Failed to write to file"));
-    }
+    if (serializeJson(doc, file) == 0)
+      Log(ERROR, "Failed to write WiFi config file\n");
     file.close();
   }
-  //else{
-    //LOG("File not able to be opened :(");
-  //}
+  NVSsaveWifi(WFC);
 }
 
 void MqttloadConfiguration(struct MQTTConfig* MQC) {
-  // Open file for reading
   File file = LittleFS.open(MQTTfilename);
-
-  // Allocate a temporary JsonDocument
-  // Don't forget to change the capacity to match your requirements.
-  // Use arduinojson.org/v6/assistant to compute the capacity.
-  StaticJsonDocument<256> doc;
-
-  // Deserialize the JSON document
+  StaticJsonDocument<512> doc;
   DeserializationError error = deserializeJson(doc, file);
-  if (error){
-    //LOG("MQTT - File Read Error, Rebuilding file from defults ****Rebooting****\r");
+  if (error) {
+    Log(ERROR, "MQTT config read error — resetting to defaults\n");
     LittleFS.remove(MQTTfilename);
     delay(1000);
-    ESP.restart(); //Reboot the device and load defaults. 
-  }
-  else{
-    // Copy values from the JsonDocument to the Config
-    strlcpy(MQC->MQTTIP,doc["MQTTIP"],sizeof(MQC->MQTTIP));
-    strlcpy(MQC->MQTTPassword,doc["MQTTPassword"],sizeof(MQC->MQTTPassword));
-    MQC->MQTTEnabble = doc["MQTTEnabble"];
-    MQC->MQTTPasswordLN = doc["MQTTPasswordLN"];
-    // Close the file (Curiously, File's destructor doesn't close the file)
+    ESP.restart();
+  } else {
+    strlcpy(MQC->MQTTIP,       doc["MQTTIP"]       | MQC->MQTTIP,       sizeof(MQC->MQTTIP));
+    strlcpy(MQC->MQTTUser,     doc["MQTTUser"]     | MQC->MQTTUser,     sizeof(MQC->MQTTUser));
+    strlcpy(MQC->MQTTPassword, doc["MQTTPassword"] | MQC->MQTTPassword, sizeof(MQC->MQTTPassword));
+    MQC->MQTTEnabble    = doc["MQTTEnabble"]    | MQC->MQTTEnabble;
+    MQC->MQTTPort       = doc["MQTTPort"]       | MQC->MQTTPort;
+    MQC->MQTTPasswordLN = doc["MQTTPasswordLN"] | MQC->MQTTPasswordLN;
     file.close();
   }
 }
 
 void MqttsaveConfiguration(struct MQTTConfig* MQC) {
-  // Delete existing file, otherwise the configuration is appended to the file
   LittleFS.remove(MQTTfilename);
-
-  // Open file for writing
   File file = LittleFS.open(MQTTfilename, "w");
   if (file) {
-    //LOG("Opened MQTT File! \r");
-    // Allocate a temporary JsonDocument
-    // Don't forget to change the capacity to match your requirements.
-    // Use arduinojson.org/assistant to compute the capacity.
-    StaticJsonDocument<256> doc;
-
-    doc["MQTTEnabble"] = MQC->MQTTEnabble;
-    // Set the values in the document
-    doc["MQTTIP"] = MQC->MQTTIP;
-    doc["MQTTPassword"] = MQC->MQTTPassword;
+    StaticJsonDocument<512> doc;
+    doc["MQTTEnabble"]    = MQC->MQTTEnabble;
+    doc["MQTTIP"]         = MQC->MQTTIP;
+    doc["MQTTPort"]       = MQC->MQTTPort;
+    doc["MQTTUser"]       = MQC->MQTTUser;
+    doc["MQTTPassword"]   = MQC->MQTTPassword;
     doc["MQTTPasswordLN"] = MQC->MQTTPasswordLN;
-    // Serialize JSON to file
-    //serializeJsonPretty(doc, Serial);
-    if (serializeJson(doc, file) == 0) {
-      Serial.println(F("Failed to write MQTT file"));
-    }
+    if (serializeJson(doc, file) == 0)
+      Log(ERROR, "Failed to write MQTT config file\n");
     file.close();
   }
-  //else{
-    //Log("MQTT File not able to be opened :(");
-  //}
+  NVSsaveMQTT(MQC);
+}
+
+void PushoverComfig(struct PushoverConfig* PVC) {
+  if (LittleFS.exists(Pushoverfilename)) {
+    PushoverloadConfiguration(PVC);
+  } else {
+    PushoversaveConfiguration(PVC);
+    PushoverloadConfiguration(PVC);
+  }
+}
+
+void PushoverloadConfiguration(struct PushoverConfig* PVC) {
+  File file = LittleFS.open(Pushoverfilename);
+  StaticJsonDocument<256> doc;
+  if (deserializeJson(doc, file) == DeserializationError::Ok) {
+    PVC->enabled = doc["enabled"] | PVC->enabled;
+    strlcpy(PVC->token,   doc["token"]   | PVC->token,   sizeof(PVC->token));
+    strlcpy(PVC->userKey, doc["userKey"] | PVC->userKey, sizeof(PVC->userKey));
+  }
+  file.close();
+}
+
+void PushoversaveConfiguration(struct PushoverConfig* PVC) {
+  LittleFS.remove(Pushoverfilename);
+  File file = LittleFS.open(Pushoverfilename, "w");
+  if (file) {
+    StaticJsonDocument<256> doc;
+    doc["enabled"] = PVC->enabled;
+    doc["token"]   = PVC->token;
+    doc["userKey"] = PVC->userKey;
+    if (serializeJson(doc, file) == 0)
+      Log(ERROR, "Failed to write Pushover config file\n");
+    file.close();
+  }
 }
 
 void PrintWiFiConfigStruct(struct WiFiConfig* WFC){
-  Serial.print("AccsessPoint: ");
-  volatile unsigned char i = 0;
-  for(i = 0; i < WFC->SSIDLN; i++){
-    Serial.print(WFC->SSID[i]);
-  }
-  Serial.println();
-  Serial.print("Passcode: ");
-  for(i = 0; i < WFC->PswdLN; i++){
-    Serial.print(WFC->Passcode[i]);
-  }
-  Serial.println();
-  Serial.print("Host: ");
-  for(i = 0; i < WFC->HoastLN; i++){
-    Serial.print(WFC->Host[i]);
-  }
-  Serial.println();
-  Serial.print("DHCP : "); Serial.println(WFC->DHCP);
-  Serial.print("IP: ");
-  for(i = 0; i < 16; i++){
-    Serial.print(WFC->IP[i]);
-  }
-  Serial.println();
-  Serial.print("DefultGateway: ");
-  for(i = 0; i < 16; i++){
-    Serial.print(WFC->DefultGateway[i]);
-  }
-  Serial.println();
-  Serial.print("SubMask: ");
-  for(i = 0; i < 16; i++){
-    Serial.print(WFC->SubMask[i]);
-  }
-  Serial.println();
-  Serial.println();
+  Log(LOG, "WiFi SSID: %s  Host: %s  DHCP: %d\n", WFC->SSID, WFC->Host, WFC->DHCP);
 }
 
 void PrintMqttConfigStruct(struct MQTTConfig* MQC){
-  Serial.print("Mqtt IP: ");
-  volatile unsigned char i = 0;
-  for(i = 0; i < 16; i++){
-    Serial.print(MQC->MQTTIP[i]);
-  }
-  Serial.println();
-  Serial.print(" MQtt Passcode: ");
-  for(i = 0; i < MQC->MQTTPasswordLN; i++){
-    Serial.print(MQC->MQTTPassword[i]);
-  }
-  Serial.println();
-  Serial.println();
+  Log(LOG, "MQTT IP: %s  Port: %d  User: %s\n", MQC->MQTTIP, MQC->MQTTPort, MQC->MQTTUser);
 }
 
 void listDir(fs::FS &fs, const char * dirname, uint8_t levels){
-    Serial.printf("Listing directory: %s\r\n", dirname);
-
     File root = fs.open(dirname);
-    if(!root){
-        Serial.println("- failed to open directory");
-        return;
-    }
-    if(!root.isDirectory()){
-        Serial.println(" - not a directory");
-        return;
-    }
-
+    if(!root || !root.isDirectory()) return;
     File file = root.openNextFile();
     while(file){
         if(file.isDirectory()){
-            Serial.print("  DIR : ");
-
-            Serial.println(file.name());
-            //time_t t= file.getLastWrite();
-            //struct tm * tmstruct = localtime(&t);
-            //Serial.printf("  LAST WRITE: %d-%02d-%02d %02d:%02d:%02d\n",(tmstruct->tm_year)+1900,( tmstruct->tm_mon)+1, tmstruct->tm_mday,tmstruct->tm_hour , tmstruct->tm_min, tmstruct->tm_sec);
-
-            if(levels){
-                listDir(fs, file.name(), levels -1);
-            }
+            Log(DEBUG, "  DIR: %s\n", file.name());
+            if(levels) listDir(fs, file.name(), levels - 1);
         } else {
-            Serial.print("  FILE: ");
-            Serial.print(file.name());
-            Serial.print("  SIZE: ");
-
-            Serial.println(file.size());
-            //time_t t= file.getLastWrite();
-            //struct tm * tmstruct = localtime(&t);
-            //Serial.printf("  LAST WRITE: %d-%02d-%02d %02d:%02d:%02d\n",(tmstruct->tm_year)+1900,( tmstruct->tm_mon)+1, tmstruct->tm_mday,tmstruct->tm_hour , tmstruct->tm_min, tmstruct->tm_sec);
+            Log(DEBUG, "  FILE: %s  SIZE: %d\n", file.name(), file.size());
         }
         file = root.openNextFile();
     }

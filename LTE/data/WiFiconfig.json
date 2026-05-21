@@ -1,0 +1,13 @@
+{
+  "WIFIMode": 2,
+  "SSID": "**REDACTED-SSID**",
+  "SSIDLN": 6,
+  "Passcode": "**REDACTED-PASS**",
+  "PswdLN": 13,
+  "Host": "ESPPLC-LTE",
+  "HoastLN": 10,
+  "DHCP": 1,
+  "IP": "192.168.1.10",
+  "DefultGateway": "000.000.000.000",
+  "SubMask": "000.000.000.000"
+}

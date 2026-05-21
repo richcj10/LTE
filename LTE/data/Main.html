@@ -1,269 +1,777 @@
-
-
 <!DOCTYPE html>
-<html>
-<title>ESP32PLC Web Portal</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="stylesheet" href="ESP32PLC.css">
+<html lang="en">
 <head>
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ESP32 LTE</title>
+<link rel="stylesheet" href="/ESP32PLC.css">
 </head>
 <body>
-    <div class="container">
-        <div class="SelectBox">
-            <nav>
-                <a onclick="tabs(0)"
-                   class="tab active">
-                    <img class="svg-icon" src="/svgs/House.svg">
-                </a>
-                <a onclick="tabs(1)"
-                   class="tab">
-                    <img class="svg-icon" src="/svgs/wifi.svg">
-                </a>
-                <a onclick="tabs(2)"
-                   class="tab">
-                    <img class="svg-icon" src="/svgs/server.svg">
-                </a>
-                <a onclick="tabs(3)"
-                   class="tab">
-                    <img class="svg-icon" src="/svgs/cogs.svg">
-                </a>
-                <a onclick="tabs(4)"
-                   class="tab">
-                    <img class="svg-icon" src="/svgs/file.svg">
-                </a>
-                <a onclick="tabs(5)"
-                   class="tab">
-                    <img class="svg-icon" src="/svgs/log.svg">
-                </a>
-            </nav>
+<div class="shell">
+
+  <!-- ── Sidebar nav ───────────────────────────────────── -->
+  <nav class="sidebar">
+    <!-- Status / Home -->
+    <button class="tab-btn active" data-tab="status" title="Status">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><path d="M511.8 287.6H543.8c17 0 32-14.1 32-32.1 1.1-9-3-17-11-24L564.8 185V64c0-17.67-14.3-32-32-32h-32c-17.7 0-32 14.33-32 32v36.7L309.5 7.014C303.4 2.004 295.4 0 288.4 0c-7 0-15 1.002-22 8.016L10.01 231.5C3.004 238.5 0 246.5 0 255.5c0 18 14.02 32.1 32.05 32.1H64v69.6c-.06.9-.09 1.9-.09 2.8V472c0 22.09 17.91 40 40 40h16c1.2 0 2.4-.09 3.6-.1 1.5.1 3 .1 4.5.1H184c22.1 0 40-17.9 40-40V384c0-17.7 14.3-32 32-32h64c17.7 0 32 14.3 32 32v88c0 22.1 17.9 40 40 40h56.5c1.4 0 2.8-.09 4.2-.1 1.1.09 2.2.1 3.3.1H472c22.1 0 40-17.9 40-40V455.8c.3-2.7.5-5.3.5-8.1L511.8 287.6z"/></svg>
+    </button>
+    <!-- Cellular -->
+    <button class="tab-btn" data-tab="cell" title="Cellular">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><path d="M272 0H48C21.5 0 0 21.5 0 48v416c0 26.5 21.5 48 48 48h224c26.5 0 48-21.5 48-48V48c0-26.5-21.5-48-48-48zM160 480c-17.7 0-32-14.3-32-32s14.3-32 32-32 32 14.3 32 32-14.3 32-32 32zm112-108c0 6.6-5.4 12-12 12H60c-6.6 0-12-5.4-12-12V60c0-6.6 5.4-12 12-12h200c6.6 0 12 5.4 12 12v312z"/></svg>
+    </button>
+    <!-- GPS -->
+    <button class="tab-btn" data-tab="gps" title="GPS">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><path d="M172.268 501.67C26.97 291.031 0 269.413 0 192 0 85.961 85.961 0 192 0s192 85.961 192 192c0 77.413-26.97 99.031-172.268 309.67-9.535 13.774-29.93 13.773-39.464 0zM192 272c44.183 0 80-35.817 80-80s-35.817-80-80-80-80 35.817-80 80 35.817 80 80 80z"/></svg>
+    </button>
+    <!-- Battery -->
+    <button class="tab-btn" data-tab="batt" title="Battery">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><path d="M560 96H48C21.5 96 0 117.5 0 144v224c0 26.5 21.5 48 48 48h512c26.5 0 48-21.5 48-48v-16h8c13.3 0 24-10.7 24-24v-64c0-13.3-10.7-24-24-24h-8v-16c0-26.5-21.5-48-48-48zM96 352V160h336v192H96z"/></svg>
+    </button>
+    <!-- RS485 / Bus -->
+    <button class="tab-btn" data-tab="rs485" title="RS485">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M384 0H96C70.34 0 48 22.34 48 48v16H16C7.16 64 0 71.16 0 80s7.16 16 16 16h32v64H16c-8.84 0-16 7.16-16 16s7.16 16 16 16h32v64H16c-8.84 0-16 7.16-16 16s7.16 16 16 16h32v16c0 25.66 22.34 48 48 48h288c25.66 0 48-22.34 48-48v-16h32c8.84 0 16-7.16 16-16s-7.16-16-16-16h-32v-64h32c8.84 0 16-7.16 16-16s-7.16-16-16-16h-32v-64h32c8.84 0 16-7.16 16-16s-7.16-16-16-16h-32V48c0-25.66-22.34-48-48-48zM96 384V128h320v256H96zm48-168v80h224v-80H144z"/></svg>
+    </button>
+    <!-- OTA / Cloud Upload -->
+    <button class="tab-btn" data-tab="ota" title="OTA Update">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><path d="M537.6 226.6c4.1-10.7 6.4-22.4 6.4-34.6 0-53-43-96-96-96-19.7 0-38.1 6-53.3 16.2C367 64.2 315.3 32 256 32c-88.4 0-160 71.6-160 160 0 2.7.1 5.4.2 8.1C40.2 219.8 0 273.2 0 336c0 79.5 64.5 144 144 144h368c70.7 0 128-57.3 128-128 0-61.9-44-113.6-102.4-125.4zm-132.9 88.7L320 229.3l-84.7 86c-9.4 9.4-24.6 9.4-33.9 0l-17.8-17.8c-9.4-9.4-9.4-24.6 0-33.9l118-118.1c9.4-9.4 24.6-9.4 33.9 0l118 118.1c9.4 9.4 9.4 24.6 0 33.9l-17.8 17.8c-9.4 9.4-24.7 9.4-34 0z"/></svg>
+    </button>
+    <!-- Log / Terminal -->
+    <button class="tab-btn" data-tab="log" title="Log">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 3H4a1 1 0 00-1 1v16a1 1 0 001 1h16a1 1 0 001-1V4a1 1 0 00-1-1zm-1 16H5V5h14v14zM7.293 9.707l2.147 2.146-2.147 2.147 1.414 1.414L12.267 12l-3.56-3.56-1.414 1.267zM13 15h4v-2h-4v2z"/></svg>
+    </button>
+    <!-- WiFi -->
+    <button class="tab-btn" data-tab="wifi" title="WiFi">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><path d="M634.91 154.88C457.74-8.99 182.19-8.93 5.09 154.88c-6.66 6.16-6.79 16.59-.35 22.98l34.24 33.97c6.14 6.1 16.02 6.23 22.4.38 145.92-133.68 371.3-133.71 517.25 0 6.38 5.85 16.26 5.71 22.4-.38l34.24-33.97c6.43-6.39 6.3-16.82-.36-22.98zM320 352c-35.35 0-64 28.65-64 64s28.65 64 64 64 64-28.65 64-64-28.65-64-64-64zm202.67-83.59c-115.26-101.93-290.21-101.82-405.34 0-6.9 6.1-7.12 16.69-.57 23.15l34.44 33.99c6 5.92 15.66 6.32 22.05.8 83.95-72.57 209.74-72.41 293.49 0 6.39 5.52 16.05 5.13 22.05-.8l34.44-33.99c6.56-6.46 6.33-17.06-.56-23.15z"/></svg>
+    </button>
+    <!-- MQTT / Server -->
+    <button class="tab-btn" data-tab="mqtt" title="MQTT">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M480 160H32c-17.673 0-32-14.327-32-32V64c0-17.673 14.327-32 32-32h448c17.673 0 32 14.327 32 32v64c0 17.673-14.327 32-32 32zm-48-88c-13.255 0-24 10.745-24 24s10.745 24 24 24 24-10.745 24-24-10.745-24-24-24zm-64 0c-13.255 0-24 10.745-24 24s10.745 24 24 24 24-10.745 24-24-10.745-24-24-24zm112 248H32c-17.673 0-32-14.327-32-32v-64c0-17.673 14.327-32 32-32h448c17.673 0 32 14.327 32 32v64c0 17.673-14.327 32-32 32zm-48-88c-13.255 0-24 10.745-24 24s10.745 24 24 24 24-10.745 24-24-10.745-24-24-24zm-64 0c-13.255 0-24 10.745-24 24s10.745 24 24 24 24-10.745 24-24-10.745-24-24-24zm112 248H32c-17.673 0-32-14.327-32-32v-64c0-17.673 14.327-32 32-32h448c17.673 0 32 14.327 32 32v64c0 17.673-14.327 32-32 32zm-48-88c-13.255 0-24 10.745-24 24s10.745 24 24 24 24-10.745 24-24-10.745-24-24-24zm-64 0c-13.255 0-24 10.745-24 24s10.745 24 24 24 24-10.745 24-24-10.745-24-24-24z"/></svg>
+    </button>
+    <!-- Notifications / Bell -->
+    <button class="tab-btn" data-tab="notif" title="Notifications">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M224 512c35.32 0 63.97-28.65 63.97-64H160.03c0 35.35 28.65 64 63.97 64zm215.39-149.71c-19.32-20.76-55.47-51.99-55.47-154.29 0-77.7-54.48-139.9-127.94-155.16V32c0-17.67-14.32-32-31.98-32s-31.98 14.33-31.98 32v20.84C118.56 68.1 64.08 130.3 64.08 208c0 102.3-36.15 133.53-55.47 154.29-6 6.45-8.66 14.16-8.61 21.71.11 17.4 13.62 32 32.1 32h383.8c18.48 0 32-14.6 32.1-32 .05-7.55-2.61-15.27-8.61-21.71z"/></svg>
+    </button>
+  </nav>
+
+  <!-- ── Content ───────────────────────────────────────── -->
+  <main class="content">
+
+    <!-- ════ STATUS ════ -->
+    <div class="panel active" id="panel-status">
+      <div class="page-header" style="display:flex;align-items:center;justify-content:space-between;">
+        Status
+        <button class="btn btn-red" style="font-size:12px;padding:5px 12px;" onclick="reboot()">Reboot</button>
+      </div>
+
+      <div class="stat-grid" style="margin-bottom:12px;">
+        <div class="stat"><div class="stat-label">Name</div><div class="stat-val" id="s-name">—</div></div>
+        <div class="stat"><div class="stat-label">IP</div><div class="stat-val" id="s-ip">—</div></div>
+        <div class="stat"><div class="stat-label">MAC</div><div class="stat-val" id="s-mac">—</div></div>
+        <div class="stat"><div class="stat-label">WiFi RSSI</div><div class="stat-val" id="s-wrssi">—</div></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Services</div>
+        <div class="row"><span class="row-label">WiFi</span>     <span id="s-wifi-badge"  class="badge badge-grey">—</span></div>
+        <div class="row"><span class="row-label">MQTT</span>     <span id="s-mqtt-badge"  class="badge badge-grey">—</span></div>
+        <div class="row"><span class="row-label">Cellular</span> <span id="s-cell-badge"  class="badge badge-grey">—</span></div>
+        <div class="row"><span class="row-label">GPS</span>      <span id="s-gps-badge"   class="badge badge-grey">—</span></div>
+        <div class="row"><span class="row-label">RS485</span>    <span id="s-rs485-badge" class="badge badge-cyan">Slave</span></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Quick Stats</div>
+        <div class="stat-grid">
+          <div class="stat"><div class="stat-label">Battery</div><div class="stat-val" id="s-soc">—</div></div>
+          <div class="stat"><div class="stat-label">Cell RSSI</div><div class="stat-val" id="s-crssi">—</div></div>
+          <div class="stat"><div class="stat-label">GPS Fix</div><div class="stat-val" id="s-gfix">—</div></div>
+          <div class="stat"><div class="stat-label">RS485 Err</div><div class="stat-val" id="s-rserr">—</div></div>
         </div>
-        <div class="rightbox">
-            <div class = "home tabShow">
-                <h1>Home</h1>
-                <fieldset>
-                    <legend>Device Connections:</legend>
-                    <p class='Same'>Device Mode: </p>
-                    <p class='Same' id="dCon">AP</p>
-                    <p class='Same'>&emsp;SSID: </p>
-                    <p class='Same' id="dssid">Test</p>
-                    <br>
-                    <p class='Same'>IP: </p>
-                    <p class='Same' id="dIP">192.168.100.100</p>
-                    <p class='Same'>&emsp;RSSI: </p>
-                    <p class='Same' id="dRSSI">90</p>
-                    <br>
-                    <p class='Same'>MAC: </p>
-                    <p class='Same' id="dMAC">xx:xx:xx:xx</p>
-                </fieldset>
-                <fieldset>
-                    <legend>Cellulare Status:</legend>
-                    <p class='Same'>Status: </p>
-                    <p class='Same' id="dLTEStat">...</p>
-                    <p class='Same'>SIM: </p>
-                    <p class='Same' id="dDetected">...</p>
-                    <p class='Same'>&emsp;Network: </p>
-                    <p class='Same' id="dSIMNwk">...</p>
-                    <br>
-                    <p class='Same'>RSSI: </p>
-                    <p class='Same' id="dNtwkRSSI">0</p>
-                    <p class='Same'>&emsp;Network IP: </p>
-                    <p class='Same' id="dNtwkIP">0.0.0.0</p>
-                    <br>
-                    <p class='Same'>GPS: </p>
-                    <p class='Same' id="dGPSOK">...</p>
-                    <p class='Same'>LAT: </p>
-                    <p class='Same' id="dLAT">...</p>
-                    <p class='Same'>LON: </p>
-                    <p class='Same' id="dLON">...</p>
-                </fieldset>
-                <fieldset>
-                    <legend>Battery:</legend>
-                    <p class='Same'>PowerMode: </p>
-                    <p class='Same' id="PwrMode">0</p>
-                    <br>
-                    <p class='Same'>Battery Voltage: </p>
-                    <p class='Same' id="dBatVolt">...</p>
-                    <p class='Same'>&emsp;Battery %: </p>
-                    <p class='Same' id="dBatPct">...</p>
-                </fieldset>
-            </div>
-            <div class = "wificonfig tabShow">
-                <h1>WiFi Info</h1>
-                <fieldset>
-                    <legend>WiFi Config:</legend>
-                    <p class='Same'>SSID: </p>
-                    <input type="text" id="SSIDIn" name="ssid">
-                    <br>
-                    <p class='Same'>Password: </p>
-                    <input type="text" id="PWDin" name="pswd">
-                    <br>
-                    <button type="button" onclick="alert('Hello world!')">Save</button>
-                    <br>
-                </fieldset>
-                <fieldset>
-                    <legend>IP Config:</legend>
-                    <p class='Same'>DHCP: </p>
-                    <input type="checkbox" id="DHCPEn" name="dhcpctl">
-                    <p class='Same'> Static IP: </p>
-                    <input type="text" id="SIPIn" name="sIP">
-                    <br>
-                    <p class='Same'>Gateway: </p>
-                    <input type="text" id="GWIn" name="dGW">
-                    <br>
-                    <p class='Same'>Subnet Mask: </p>
-                    <input type="text" id="SNIn" name="dSN">
-                    <br>
-                    <button type="button" onclick="alert('Hello world!')">Save</button>
-                    <br>
-                </fieldset>
-            </div>
-            <div class = "mqttcontrol tabShow">
-                <h1>MQTT Info</h1>
-            </div>
-            <div class = "LTE tabShow">
-                <h1>LTE</h1>
-                <fieldset>
-                    <legend>LTE Config:</legend>
-                    <p class='Same'>Network (apn): </p>
-                    <input type="text" id="APNIn" name="ssid">
-                    <br>
-                    <p class='Same'>Password: </p>
-                    <input type="text" id="PWDin" name="pswd">
-                    <br>
-                    <p class='Same'>LTE Mode: </p>
-                    <select name="NetworkMode" id="NW">
-                        <option value="NB-IoT">NB-IoT</option>
-                        <option value="CAT-M">CAT-M</option>
-                    </select>
-                    <br>
-                    <p class='Same'>Band: </p>
-                    <select name="Band" id="BndNumber">
-                        <option value="12">ATT</option>
-                        <option value="13">Verizon</option>
-                    </select>
-                    <br>
-                    <button type="button" onclick="alert('Sent info to the device!')">Save</button>
-                    <br>
-                </fieldset>
-            </div>
-            <div class = "FileView tabShow">
-                <h1>File Info</h1>
-            </div>
-            <div class = "Log tabShow">
-                <fieldset>
-                    <legend>LOG:</legend>
-                      <div class="terminal" id="history"></div>
-                      <button type="button" id="SendInput">Send</button>
-                      <input type="text" id="Loginput">
-                </fieldset>
-            </div>
-        </div>
+      </div>
     </div>
-    <script>
-        const tabBtn = document.querySelectorAll(".tab");    
-        const tab = document.querySelectorAll(".tabShow");   
-        
-        function tabs(pannelIndex) {
-            console.log(pannelIndex);
-            tab.forEach(function(node) {
-                node.style.display = "none";
-            });
-            console.log(tab[pannelIndex]);
-            tab[pannelIndex].style.display = "block";
-        }
-        tabs(0);
-        
-        function message(msg){
-            var notification = new Notification("Alert", {body: msg});
-            setTimeout(function() {notification.close()}, 1000);
-        }
-    </script>
-    <script>
-        $(".tab").click(function() {
-            $(this).addClass("active").siblings().removeClass("active");
-        })
-    </script>
-    <script type = "text/javascript">
-        var DeviceName = 'PLCLTE:XX:XX';
-        var socket = new WebSocket(((window.location.protocol === "https:") ? "wss://" : "ws://") + window.location.host + "/ws");
-        //const socket = new WebSocket('ws://localhost:80/ws'); 
-        socket.addEventListener('open', function (event) { 
-            socket.send('CNT'); 
-            message("Connected");
-        }); 
 
-        socket.addEventListener('message', function (event) { 
-            console.log('Message from server ', event.data);
-            const obj = JSON.parse(event.data);
-            if(obj.Type == 0){
-                DeviceName = obj.HN;
-                console.log('Server Name ',DeviceName);
-                document.getElementById("dssid").innerHTML = obj.SSID;
-                document.getElementById("dMAC").innerHTML = obj.MAC;
-                document.getElementById("dIP").innerHTML = obj.IP;
-            }
-            if(obj.Type == 1){
-                document.getElementById("dRSSI").innerHTML = obj.RSSI;
-                //document.getElementById("dssid").innerHTML = obj.IO1;
-                //document.getElementById("dMAC").innerHTML = obj.IO2;
-            }
-            if(obj.Type == 2){
-                document.getElementById("dLTEStat").innerHTML = obj.CELST;
-                document.getElementById("dNtwkIP").innerHTML = obj.CELIP;
-                document.getElementById("dNtwkRSSI").innerHTML = obj.CELSIG;
-                document.getElementById("dSIMNwk").innerHTML = obj.CELNT;
-                document.getElementById("dGPSOK").innerHTML = obj.GPSEN;
-                document.getElementById("dLAT").innerHTML = obj.GPSLAT;
-                document.getElementById("dLON").innerHTML = obj.GPSLOG;
-                document.getElementById("dDetected").innerHTML = obj.SIM;
-            }
-            if(obj.Type == 3){
-                document.getElementById("dBatVolt").innerHTML = obj.BATV;
-                document.getElementById("dBatPct").innerHTML = obj.BATP;
-                document.getElementById("PwrMode").innerHTML = obj.PWRMD;
-            }
-            if(obj.Type == 10){
-                append_to_div(obj.LOG);
-            }
-        });
+    <!-- ════ CELLULAR ════ -->
+    <div class="panel" id="panel-cell">
+      <div class="page-header">Cellular</div>
 
-        socket.addEventListener('close', function (event) { 
-            console.log('The connection has been closed');
-            message("Server Disconnected");
-        });
-        socket.addEventListener('onerror', function (event) { 
-            console.log('The connection has been lost');
-            alert("Server connection lost");
-        });
-        
-        function IODisplay(I1,I2,I3,I4,O1,O2,O3,O4){
-            if(I1 == true){
-                document.getElementById("In1").style.backgroundColor  = 'Green';
-            }
-            else{
-                document.getElementById("In1").style.backgroundColor  = 'Red';
-            }
-        }
+      <div class="card">
+        <div class="card-title">Network Status</div>
+        <div class="row">
+          <span class="row-label">Modem</span>
+          <span id="c-on-badge" class="badge badge-red">Off</span>
+        </div>
+        <div class="row">
+          <span class="row-label">Stage</span>
+          <span class="row-value" id="c-state">—</span>
+        </div>
+        <div class="row">
+          <span class="row-label">Status</span>
+          <span id="c-conn-badge" class="badge badge-red">Offline</span>
+        </div>
+        <div class="row"><span class="row-label">Network</span> <span class="row-value" id="c-network">—</span></div>
+        <div class="row"><span class="row-label">IP</span>      <span class="row-value" id="c-ip">—</span></div>
+        <div class="row"><span class="row-label">SIM</span>     <span class="row-value" id="c-sim">—</span></div>
+        <div class="row"><span class="row-label">RSSI</span>    <span class="row-value" id="c-rssi">—</span></div>
+        <div style="margin-top:10px;">
+          <div class="stat-label" style="margin-bottom:4px;">Signal Level</div>
+          <div class="prog-bg"><div class="prog-fill" id="c-sig-bar" style="width:0%"></div></div>
+        </div>
+        <div class="btn-row" style="margin-top:12px;">
+          <button class="btn-ghost" onclick="loadCellular()">Refresh</button>
+        </div>
+      </div>
+    </div>
 
-        function append_to_div(data){ 
-	        document.getElementById("history").innerText += data; 
-            const element = document.getElementById("history");
-            element.scrollTop = element.scrollHeight;
-        } 
+    <!-- ════ GPS ════ -->
+    <div class="panel" id="panel-gps">
+      <div class="page-header">GPS</div>
 
-        document.getElementById("SendInput").addEventListener('click', function() { 
-            var e_input = document.getElementById("Loginput"); 
-            var value = e_input.value.trim(); 
+      <div class="card">
+        <div class="card-title">Fix Status</div>
+        <div class="row"><span class="row-label">Fix</span>      <span id="g-fix-badge" class="badge badge-red">No Fix</span></div>
+        <div class="row"><span class="row-label">Latitude</span> <span class="row-value" id="g-lat">—</span></div>
+        <div class="row"><span class="row-label">Longitude</span><span class="row-value" id="g-lon">—</span></div>
+        <div class="row"><span class="row-label">Altitude</span> <span class="row-value" id="g-alt">—</span></div>
+        <div class="row"><span class="row-label">Speed</span>    <span class="row-value" id="g-spd">—</span></div>
+        <div class="row"><span class="row-label">Heading</span>  <span class="row-value" id="g-hdg">—</span></div>
+      </div>
 
-            if(!value){
-                alert("Input field can't be empty!"); 
-            } else {
-                append_to_div( value+"\n"); 
-            }
-            //e_input.value = ""; 
-        }); 
+      <div class="card">
+        <div class="card-title">Control</div>
+        <div class="btn-row">
+          <button class="btn"       onclick="gpsEnable(true)">Enable GPS</button>
+          <button class="btn-ghost" onclick="gpsEnable(false)">Disable GPS</button>
+        </div>
+        <div id="g-status-msg" style="font-size:12px;color:var(--muted);margin-top:8px;"></div>
+      </div>
+    </div>
 
-    </script>
+    <!-- ════ BATTERY ════ -->
+    <div class="panel" id="panel-batt">
+      <div class="page-header">Battery</div>
+
+      <div class="card">
+        <div class="card-title">State of Charge</div>
+        <div style="font-size:36px;font-weight:700;color:var(--cyan);margin-bottom:6px;" id="b-soc">—</div>
+        <div class="prog-bg"><div class="prog-fill" id="b-soc-bar" style="width:0%"></div></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Details</div>
+        <div class="stat-grid">
+          <div class="stat"><div class="stat-label">Voltage</div>   <div class="stat-val" id="b-volt">—</div></div>
+          <div class="stat"><div class="stat-label">Rate %/hr</div> <div class="stat-val" id="b-rate">—</div></div>
+          <div class="stat"><div class="stat-label">Mode</div>      <div class="stat-val" id="b-mode">—</div></div>
+          <div class="stat"><div class="stat-label">Alert</div>     <div class="stat-val" id="b-alert">—</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ RS485 ════ -->
+    <div class="panel" id="panel-rs485">
+      <div class="page-header">RS485 / Modbus</div>
+
+      <div class="card">
+        <div class="card-title">Slave Info</div>
+        <div class="row"><span class="row-label">Slave ID</span>    <span class="row-value" id="r-id">—</span></div>
+        <div class="row"><span class="row-label">Msg Count</span>   <span class="row-value" id="r-msg">—</span></div>
+        <div class="row"><span class="row-label">Error Count</span> <span class="row-value" id="r-err">—</span></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Boot Mode</div>
+        <p style="color:var(--muted);font-size:12px;margin-bottom:12px;">
+          UART0 is shared between RS485 and serial debug. Mode is set at boot — device reboots to apply.
+        </p>
+        <div class="row" style="margin-bottom:10px;">
+          <span class="row-label">Current</span>
+          <span id="r-mode-badge" class="badge badge-grey">—</span>
+        </div>
+        <div class="btn-row">
+          <button class="btn"       onclick="setRS485Mode(true)">RS485 Mode</button>
+          <button class="btn-ghost" onclick="setRS485Mode(false)">Debug Mode</button>
+        </div>
+        <div id="r-debug-msg" style="font-size:12px;color:var(--muted);margin-top:8px;"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Commands Received</div>
+        <div class="terminal" id="r-events" style="height:200px;"></div>
+      </div>
+    </div>
+
+    <!-- ════ OTA ════ -->
+    <div class="panel" id="panel-ota">
+      <div class="page-header">OTA Firmware Update</div>
+
+      <div class="card">
+        <div class="card-title">Over-The-Air Update</div>
+        <p style="color:var(--text);margin-bottom:12px;line-height:1.6;">
+          Use PlatformIO with <code style="color:var(--cyan);background:#111;padding:1px 5px;border-radius:3px;">upload_protocol = espota</code>
+          or the Arduino IDE OTA feature to flash new firmware wirelessly.
+        </p>
+        <div class="row"><span class="row-label">Hostname</span><span class="row-value" id="o-host">—</span></div>
+        <div class="row"><span class="row-label">Status</span>  <span id="o-status" class="badge badge-cyan">Ready</span></div>
+        <div style="margin-top:12px;">
+          <div class="stat-label" style="margin-bottom:4px;">Update Progress</div>
+          <div class="prog-bg"><div class="prog-fill" id="o-prog-bar" style="width:0%"></div></div>
+          <div style="font-size:12px;color:var(--muted);margin-top:4px;" id="o-prog-txt"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ LOG ════ -->
+    <div class="panel" id="panel-log">
+      <div class="page-header">System Log</div>
+      <div class="card">
+        <div class="terminal" id="log-terminal"></div>
+        <div class="btn-row" style="margin-top:8px;">
+          <button class="btn-ghost" onclick="clearLog()">Clear</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ WIFI CONFIG ════ -->
+    <div class="panel" id="panel-wifi">
+      <div class="page-header">WiFi Config</div>
+      <div class="card">
+        <div class="card-title">Network Settings</div>
+        <div class="form-row">
+          <label>SSID</label>
+          <input type="text" id="w-ssid" placeholder="Network name">
+        </div>
+        <div class="form-row">
+          <label>Password</label>
+          <input type="password" id="w-pass" placeholder="Password">
+          <button class="btn-ghost" onclick="togglePwd('w-pass',this)" title="Show/hide">&#128065;</button>
+        </div>
+        <div class="form-row">
+          <label>Hostname</label>
+          <input type="text" id="w-host" placeholder="Device hostname">
+        </div>
+        <div class="sep"></div>
+        <div class="form-row">
+          <label>DHCP</label>
+          <input type="checkbox" id="w-dhcp" checked>
+        </div>
+        <div id="w-static-fields">
+          <div class="form-row"><label>Static IP</label><input type="text" id="w-ip"  placeholder="192.168.1.x"></div>
+          <div class="form-row"><label>Gateway</label>  <input type="text" id="w-gw"  placeholder="192.168.1.1"></div>
+          <div class="form-row"><label>Subnet</label>   <input type="text" id="w-sub" placeholder="255.255.255.0"></div>
+        </div>
+        <div class="btn-row">
+          <button class="btn" onclick="saveWifi()">Save &amp; Restart</button>
+          <button class="btn-ghost" onclick="loadWifi()">Reload</button>
+          <span class="status-text" id="w-msg"></span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Backup / Restore</div>
+        <div class="btn-row">
+          <a href="/WiFiconfig.json" download style="text-decoration:none;">
+            <button class="btn-ghost" type="button">&#11123; Download Config</button>
+          </a>
+          <input type="file" id="w-json-file" accept=".json" style="display:none" onchange="importWifiJson(this)">
+          <button class="btn-ghost" onclick="document.getElementById('w-json-file').click()">&#128194; Load Config JSON</button>
+        </div>
+        <div style="margin-top:8px;"><span class="status-text" id="w-import-msg"></span></div>
+      </div>
+    </div>
+
+    <!-- ════ MQTT CONFIG ════ -->
+    <div class="panel" id="panel-mqtt">
+      <div class="page-header">MQTT Config</div>
+      <div class="card">
+        <div class="card-title">Broker Settings</div>
+        <div class="form-row">
+          <label>Enabled</label>
+          <input type="checkbox" id="m-en">
+        </div>
+        <div class="form-row">
+          <label>Broker IP</label>
+          <input type="text" id="m-ip" placeholder="192.168.x.x">
+        </div>
+        <div class="form-row">
+          <label>Port</label>
+          <input type="number" id="m-port" placeholder="1883" min="1" max="65535" style="max-width:100px;">
+        </div>
+        <div class="form-row">
+          <label>Username</label>
+          <input type="text" id="m-user" placeholder="username">
+        </div>
+        <div class="form-row">
+          <label>Password</label>
+          <input type="password" id="m-pass" placeholder="password">
+          <button class="btn-ghost" onclick="togglePwd('m-pass',this)" title="Show/hide">&#128065;</button>
+        </div>
+        <div class="btn-row">
+          <button class="btn" onclick="saveMqtt()">Save &amp; Restart</button>
+          <button class="btn-ghost" onclick="loadMqtt()">Reload</button>
+          <span class="status-text" id="m-msg"></span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Backup / Restore</div>
+        <div class="btn-row">
+          <a href="/MQTTconfig.json" download style="text-decoration:none;">
+            <button class="btn-ghost" type="button">&#11123; Download Config</button>
+          </a>
+          <input type="file" id="m-json-file" accept=".json" style="display:none" onchange="importMqttJson(this)">
+          <button class="btn-ghost" onclick="document.getElementById('m-json-file').click()">&#128194; Load Config JSON</button>
+        </div>
+        <div style="margin-top:8px;"><span class="status-text" id="m-import-msg"></span></div>
+      </div>
+    </div>
+
+    <!-- ════ NOTIFICATIONS ════ -->
+    <div class="panel" id="panel-notif">
+      <div class="page-header">Notifications</div>
+      <div class="card">
+        <div class="card-title">Pushover</div>
+        <div class="form-row">
+          <label>Enabled</label>
+          <input type="checkbox" id="pv-en">
+        </div>
+        <div class="form-row">
+          <label>App Token</label>
+          <input type="password" id="pv-token" placeholder="App token">
+          <button class="btn-ghost" onclick="togglePwd('pv-token',this)" title="Show/hide">&#128065;</button>
+        </div>
+        <div class="form-row">
+          <label>User Key</label>
+          <input type="password" id="pv-userkey" placeholder="User key">
+          <button class="btn-ghost" onclick="togglePwd('pv-userkey',this)" title="Show/hide">&#128065;</button>
+        </div>
+        <div class="btn-row">
+          <button class="btn" onclick="savePushover()">Save</button>
+          <button class="btn-ghost" onclick="loadPushover()">Reload</button>
+          <button class="btn-ghost" onclick="testPushover()" id="pv-test-btn">Send Test</button>
+          <span class="status-text" id="pv-msg"></span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Backup / Restore</div>
+        <div class="btn-row">
+          <a href="/Pushoverconfig.json" download style="text-decoration:none;">
+            <button class="btn-ghost" type="button">&#11123; Download Config</button>
+          </a>
+          <input type="file" id="pv-json-file" accept=".json" style="display:none" onchange="importPushoverJson(this)">
+          <button class="btn-ghost" onclick="document.getElementById('pv-json-file').click()">&#128194; Load Config JSON</button>
+        </div>
+        <div style="margin-top:8px;"><span class="status-text" id="pv-import-msg"></span></div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+/* ── Tab system (data-tab, matches ESPPLC) ─────────────────── */
+var _panels = {}, _btns = {};
+document.querySelectorAll('.tab-btn').forEach(function(btn) {
+  var id = btn.dataset.tab;
+  _btns[id]   = btn;
+  _panels[id] = document.getElementById('panel-' + id);
+  btn.addEventListener('click', function() { showTab(id); });
+});
+
+var _pollTimer   = null;
+var _activeTab   = 'status';
+
+var _tabLoaders = {
+  status: loadStatus,
+  cell:   loadCellular,
+  gps:    loadGPS,
+  batt:   loadBattery,
+  rs485:  loadRS485,
+  ota:    loadOTA,
+  wifi:   loadWifi,
+  mqtt:   loadMqtt,
+  notif:  loadPushover
+};
+
+var _pollIntervals = {
+  status: 2000,
+  cell:   5000,
+  gps:    2000,
+  batt:   1500,
+  rs485:  1500
+};
+
+function showTab(id) {
+  Object.keys(_panels).forEach(function(k) {
+    if (_panels[k]) _panels[k].classList.remove('active');
+    if (_btns[k])   _btns[k].classList.remove('active');
+  });
+  if (_panels[id]) _panels[id].classList.add('active');
+  if (_btns[id])   _btns[id].classList.add('active');
+  if (_pollTimer)  { clearInterval(_pollTimer); _pollTimer = null; }
+  _activeTab = id;
+  if (_tabLoaders[id]) _tabLoaders[id]();
+  var interval = _pollIntervals[id] || 0;
+  if (interval > 0) _pollTimer = setInterval(_tabLoaders[id], interval);
+}
+
+/* ── WebSocket ──────────────────────────────────────────────── */
+var socket = new WebSocket(
+  (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws');
+
+socket.addEventListener('open', function() {
+  socket.send('CNT');
+  appendLog('[WS] Connected\n');
+});
+
+socket.addEventListener('message', function(ev) {
+  var obj = JSON.parse(ev.data);
+  if (obj.Type === 0) {
+    document.getElementById('s-name').innerText = obj.HN  || '—';
+    document.getElementById('s-ip').innerText   = obj.IP  || '—';
+    document.getElementById('s-mac').innerText  = obj.MAC || '—';
+    document.getElementById('o-host').innerText = obj.HN  || '—';
+  }
+  if (obj.Type === 10) appendLog(obj.LOG);
+  if (obj.Type === 20) {
+    var pct = obj.FW_PROG || 0;
+    document.getElementById('o-prog-bar').style.width = pct + '%';
+    document.getElementById('o-prog-txt').innerText = pct + '%' + (obj.FW_MSG ? ' — ' + obj.FW_MSG : '');
+    if (obj.FW_DONE) document.getElementById('o-status').innerText = obj.FW_OK ? 'Complete' : 'Failed';
+  }
+});
+
+socket.addEventListener('close', function() { appendLog('[WS] Disconnected\n'); });
+
+function appendLog(data) {
+  var el = document.getElementById('log-terminal');
+  el.innerText += data;
+  el.scrollTop  = el.scrollHeight;
+}
+
+function clearLog() { document.getElementById('log-terminal').innerText = ''; }
+
+/* ── Helpers ───────────────────────────────────────────────── */
+function badge(id, text, cls) {
+  var el = document.getElementById(id);
+  el.innerText  = text;
+  el.className  = 'badge ' + cls;
+}
+
+function setStatus(id, ok) {
+  badge(id, ok ? 'Online' : 'Offline', ok ? 'badge-green' : 'badge-red');
+}
+
+function togglePwd(id, btn) {
+  var f    = document.getElementById(id);
+  var show = f.type === 'password';
+  f.type   = show ? 'text' : 'password';
+  btn.style.opacity = show ? '1' : '0.45';
+}
+
+function showRebootBanner() {
+  if (document.getElementById('reboot-banner')) return;
+  var banner = document.createElement('div');
+  banner.id = 'reboot-banner';
+  banner.style.cssText =
+    'position:fixed;top:0;left:0;right:0;z-index:9999;background:#e6a817;' +
+    'color:#000;text-align:center;padding:14px 20px;font-size:14px;font-weight:600;' +
+    'box-shadow:0 2px 8px rgba(0,0,0,0.4);';
+  document.body.appendChild(banner);
+  var secs = 12;
+  function tick() {
+    banner.innerText = 'Config saved — rebooting. Page reloads in ' + secs + 's…';
+    if (secs-- <= 0) { location.reload(); return; }
+    setTimeout(tick, 1000);
+  }
+  tick();
+  var poll = setInterval(function() {
+    fetch('/api/status', { cache: 'no-store' })
+      .then(function(r) { if (r.ok) { clearInterval(poll); location.reload(); } })
+      .catch(function() {});
+  }, 2500);
+}
+
+/* ── Status tab ─────────────────────────────────────────────── */
+function loadStatus() {
+  fetch('/api/status').then(function(r) { return r.json(); }).then(function(d) {
+    document.getElementById('s-name').innerText  = d.name  || '—';
+    document.getElementById('s-ip').innerText    = d.ip    || '—';
+    document.getElementById('s-mac').innerText   = d.mac   || '—';
+    document.getElementById('s-wrssi').innerText = d.wrssi ? d.wrssi + ' dBm' : '—';
+    document.getElementById('s-soc').innerText   = d.soc   ? d.soc + '%' : '—';
+    document.getElementById('s-crssi').innerText = d.crssi ? d.crssi + ' dBm' : '—';
+    document.getElementById('s-gfix').innerText  = d.gfix  ? 'Fix' : 'No Fix';
+    document.getElementById('s-rserr').innerText = d.rserr !== undefined ? d.rserr : '—';
+    setStatus('s-wifi-badge', d.wifi);
+    setStatus('s-mqtt-badge', d.mqtt);
+    setStatus('s-cell-badge', d.cell);
+    badge('s-gps-badge', d.gfix ? 'Fix' : 'No Fix', d.gfix ? 'badge-green' : 'badge-red');
+  }).catch(function() {});
+}
+
+/* ── Cellular tab ────────────────────────────────────────────── */
+var _cellPollTimer = null;
+
+function loadCellular() {
+  fetch('/api/cellular').then(function(r) { return r.json(); }).then(function(d) {
+    badge('c-on-badge',   d.on   ? 'On'        : 'Off',     d.on   ? 'badge-green' : 'badge-red');
+    badge('c-conn-badge', d.connected ? 'Connected' : (d.status || 'Offline'),
+          d.connected ? 'badge-green' : 'badge-yellow');
+    document.getElementById('c-state').innerText   = d.state   || '—';
+    document.getElementById('c-network').innerText = d.network || '—';
+    document.getElementById('c-ip').innerText      = d.ip      || '—';
+    document.getElementById('c-sim').innerText     = d.sim     || '—';
+    document.getElementById('c-rssi').innerText    = d.rssi ? d.rssi + ' dBm' : '—';
+    var pct = d.rssi ? Math.max(0, Math.min(100, (d.rssi + 115) * 100 / 63)) : 0;
+    document.getElementById('c-sig-bar').style.width = pct + '%';
+    /* Auto-refresh every 3 s while not yet connected */
+    if (!d.connected) {
+      if (!_cellPollTimer) _cellPollTimer = setInterval(loadCellular, 3000);
+    } else {
+      if (_cellPollTimer) { clearInterval(_cellPollTimer); _cellPollTimer = null; }
+    }
+  }).catch(function() {});
+}
+
+/* ── GPS tab ─────────────────────────────────────────────────── */
+function loadGPS() {
+  fetch('/api/gps').then(function(r) { return r.json(); }).then(function(d) {
+    var fix = d.fix;
+    badge('g-fix-badge', fix ? 'Fix' : 'No Fix', fix ? 'badge-green' : 'badge-red');
+    document.getElementById('g-lat').innerText = fix ? d.lat       : '—';
+    document.getElementById('g-lon').innerText = fix ? d.lon       : '—';
+    document.getElementById('g-alt').innerText = fix ? d.alt + ' m' : '—';
+    document.getElementById('g-spd').innerText = fix ? d.speed + ' km/h' : '—';
+    document.getElementById('g-hdg').innerText = fix ? d.heading + '°' : '—';
+    document.getElementById('g-status-msg').innerText = d.enabled ? 'GPS enabled' : 'GPS disabled';
+  }).catch(function() {});
+}
+
+function gpsEnable(on) {
+  fetch('/api/gps/enable', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ enable: on })
+  }).then(function() {
+    document.getElementById('g-status-msg').innerText = on ? 'GPS enabled' : 'GPS disabled';
+  }).catch(function() {});
+}
+
+/* ── Battery tab ─────────────────────────────────────────────── */
+function loadBattery() {
+  fetch('/api/battery').then(function(r) { return r.json(); }).then(function(d) {
+    document.getElementById('b-soc').innerText   = d.soc  ? d.soc + '%' : '—';
+    document.getElementById('b-volt').innerText  = d.volt ? d.volt + ' V' : '—';
+    document.getElementById('b-rate').innerText  = d.rate !== undefined ? d.rate + '%/hr' : '—';
+    document.getElementById('b-mode').innerText  = d.mode  || '—';
+    document.getElementById('b-alert').innerText = d.alert ? '⚠ LOW' : 'OK';
+    document.getElementById('b-soc-bar').style.width = (d.soc || 0) + '%';
+  }).catch(function() {});
+}
+
+/* ── RS485 tab ───────────────────────────────────────────────── */
+function loadRS485() {
+  fetch('/api/rs485').then(function(r) { return r.json(); }).then(function(d) {
+    document.getElementById('r-id').innerText    = d.slaveId    !== undefined ? d.slaveId    : '—';
+    document.getElementById('r-msg').innerText   = d.msgCount   !== undefined ? d.msgCount   : '—';
+    document.getElementById('r-err').innerText   = d.errorCount !== undefined ? d.errorCount : '—';
+    document.getElementById('s-rserr').innerText = d.errorCount !== undefined ? d.errorCount : '—';
+    badge('r-mode-badge', d.rs485Mode ? 'RS485 Mode' : 'Debug Mode',
+          d.rs485Mode ? 'badge-green' : 'badge-yellow');
+  }).catch(function() {});
+  fetch('/api/rs485/events').then(function(r) { return r.text(); }).then(function(t) {
+    var el = document.getElementById('r-events');
+    el.innerText = t || '(no commands received yet)';
+    el.scrollTop = el.scrollHeight;
+  }).catch(function() {});
+}
+
+function setRS485Mode(on) {
+  document.getElementById('r-debug-msg').innerText = 'Saving and rebooting…';
+  fetch('/api/rs485/mode', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ enable: on })
+  }).catch(function() {});
+}
+
+/* ── OTA tab ─────────────────────────────────────────────────── */
+function loadOTA() {
+  fetch('/api/status').then(function(r) { return r.json(); }).then(function(d) {
+    document.getElementById('o-host').innerText = d.name || '—';
+  }).catch(function() {});
+}
+
+function reboot() {
+  if (!confirm('Reboot the device?')) return;
+  fetch('/api/reboot', { method: 'POST' });
+}
+
+/* ── WiFi config ─────────────────────────────────────────────── */
+function loadWifi() {
+  fetch('/config/wifi').then(function(r) { return r.json(); }).then(function(d) {
+    document.getElementById('w-ssid').value   = d.ssid || '';
+    document.getElementById('w-pass').value   = '';
+    document.getElementById('w-host').value   = d.host || '';
+    document.getElementById('w-dhcp').checked = d.dhcp;
+    document.getElementById('w-ip').value     = d.ip  || '';
+    document.getElementById('w-gw').value     = d.gw  || '';
+    document.getElementById('w-sub').value    = d.sub || '';
+    setMsg('w-msg', '');
+  }).catch(function(e) { setMsg('w-msg', 'Load error: ' + e, true); });
+}
+
+function saveWifi() {
+  var body = {
+    ssid: document.getElementById('w-ssid').value,
+    pass: document.getElementById('w-pass').value,
+    host: document.getElementById('w-host').value,
+    dhcp: document.getElementById('w-dhcp').checked ? 1 : 0,
+    ip:   document.getElementById('w-ip').value,
+    gw:   document.getElementById('w-gw').value,
+    sub:  document.getElementById('w-sub').value
+  };
+  setMsg('w-msg', 'Saving…');
+  fetch('/config/wifi', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.ok) showRebootBanner();
+      else setMsg('w-msg', 'Error: ' + (d.err || 'unknown'), true);
+    })
+    .catch(function(e) { setMsg('w-msg', 'Request failed', true); });
+}
+
+function importWifiJson(input) {
+  var file = input.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var o = JSON.parse(e.target.result);
+      document.getElementById('w-ssid').value   = o.ssid || o.SSID     || '';
+      document.getElementById('w-pass').value   = o.pass || o.Passcode || '';
+      document.getElementById('w-host').value   = o.host || o.Host     || '';
+      setMsg('w-import-msg', 'Loaded — review then Save & Restart');
+      setMsg('w-msg', '');
+    } catch(err) { setMsg('w-import-msg', 'Invalid JSON: ' + err.message, true); }
+    input.value = '';
+  };
+  reader.readAsText(file);
+}
+
+/* ── MQTT config ─────────────────────────────────────────────── */
+function loadMqtt() {
+  fetch('/config/mqtt').then(function(r) { return r.json(); }).then(function(d) {
+    document.getElementById('m-en').checked  = d.enabled;
+    document.getElementById('m-ip').value    = d.ip   || '';
+    document.getElementById('m-port').value  = d.port || 1883;
+    document.getElementById('m-user').value  = d.user || '';
+    document.getElementById('m-pass').value  = '';
+    setMsg('m-msg', '');
+  }).catch(function(e) { setMsg('m-msg', 'Load error: ' + e, true); });
+}
+
+function saveMqtt() {
+  var body = {
+    enabled: document.getElementById('m-en').checked,
+    ip:   document.getElementById('m-ip').value,
+    port: parseInt(document.getElementById('m-port').value) || 1883,
+    user: document.getElementById('m-user').value,
+    pass: document.getElementById('m-pass').value
+  };
+  setMsg('m-msg', 'Saving…');
+  fetch('/config/mqtt', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.ok) showRebootBanner();
+      else setMsg('m-msg', 'Error: ' + (d.err || 'unknown'), true);
+    })
+    .catch(function(e) { setMsg('m-msg', 'Request failed', true); });
+}
+
+function setMsg(id, msg, isErr) {
+  var el = document.getElementById(id);
+  el.innerText  = msg;
+  el.className  = 'status-text' + (isErr ? ' status-err' : (msg ? ' status-ok' : ''));
+}
+
+function importMqttJson(input) {
+  var file = input.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var o = JSON.parse(e.target.result);
+      document.getElementById('m-en').checked  = !!(o.enabled !== undefined ? o.enabled : o.MQTTEnabble);
+      document.getElementById('m-ip').value    = o.ip   || o.MQTTIP        || '';
+      document.getElementById('m-port').value  = o.port || o.MQTTPort      || 1883;
+      document.getElementById('m-user').value  = o.user || o.MQTTUser      || '';
+      document.getElementById('m-pass').value  = o.pass || o.MQTTPassword  || '';
+      setMsg('m-import-msg', 'Loaded — review then Save & Restart');
+      setMsg('m-msg', '');
+    } catch(err) { setMsg('m-import-msg', 'Invalid JSON: ' + err.message, true); }
+    input.value = '';
+  };
+  reader.readAsText(file);
+}
+
+/* ── Pushover / Notifications config ─────────────────────────── */
+function loadPushover() {
+  fetch('/config/pushover').then(function(r) { return r.json(); }).then(function(d) {
+    document.getElementById('pv-en').checked      = d.enabled;
+    document.getElementById('pv-token').value     = d.token   || '';
+    document.getElementById('pv-userkey').value   = d.userKey || '';
+    setMsg('pv-msg', '');
+  }).catch(function(e) { setMsg('pv-msg', 'Load error', true); });
+}
+
+function savePushover() {
+  var body = {
+    enabled: document.getElementById('pv-en').checked ? 1 : 0,
+    token:   document.getElementById('pv-token').value,
+    userKey: document.getElementById('pv-userkey').value
+  };
+  setMsg('pv-msg', 'Saving…');
+  fetch('/config/pushover', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      setMsg('pv-msg', d.ok ? 'Saved' : 'Error: ' + (d.err || 'unknown'), !d.ok);
+    })
+    .catch(function() { setMsg('pv-msg', 'Request failed', true); });
+}
+
+function testPushover() {
+  var btn = document.getElementById('pv-test-btn');
+  btn.disabled = true;
+  setMsg('pv-msg', 'Sending test…');
+  fetch('/api/pushover/test', { method: 'POST' })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      setMsg('pv-msg', d.ok ? 'Test queued — check your device' : 'Failed', !d.ok);
+      setTimeout(function() { btn.disabled = false; }, 5000);
+    })
+    .catch(function() {
+      setMsg('pv-msg', 'Request failed', true);
+      btn.disabled = false;
+    });
+}
+
+function importPushoverJson(input) {
+  var file = input.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var o = JSON.parse(e.target.result);
+      document.getElementById('pv-en').checked    = !!o.enabled;
+      document.getElementById('pv-token').value   = o.token   || '';
+      document.getElementById('pv-userkey').value = o.userKey || '';
+      setMsg('pv-import-msg', 'Loaded — review then Save');
+      setMsg('pv-msg', '');
+    } catch(err) { setMsg('pv-import-msg', 'Invalid JSON: ' + err.message, true); }
+    input.value = '';
+  };
+  reader.readAsText(file);
+}
+
+/* ── Init ───────────────────────────────────────────────────── */
+showTab('status');
+</script>
 </body>
 </html>

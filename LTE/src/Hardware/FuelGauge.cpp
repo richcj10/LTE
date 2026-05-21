@@ -10,6 +10,9 @@ float voltage = 0; // Variable to keep track of LiPo voltage
 float soc = 0; // Variable to keep track of LiPo state-of-charge (SOC)
 bool alert; // Variable to keep track of whether alert has been triggered
 char FGerror = 0;
+float CellChangeRate = 0;
+char BattMode = 0;
+char ACPwrMode = ACON;
 
 void FGsetup(char Debug){
     if(Debug){
@@ -35,11 +38,39 @@ void FGloop(){
 		voltage = lipo.getVoltage();
 		soc = lipo.getSOC();
 		alert = lipo.getAlert();
+		CellChangeRate = lipo.getChangeRate();
+		if(ACPwrMode == ACON){
+			if(CellChangeRate < -6.0){
+				BattMode++;
+				//Log(LOG," CR< 4 BattMode  = %d\n\r",BattMode);
+				if(BattMode > 30){ //30 sensonds of BUB battery 
+					ACPwrMode = BUBON;
+					BattMode = 0;
+				}
+			}
+			else{
+				BattMode = 0;
+			}
+		}
+		if(ACPwrMode == BUBON){
+			if(CellChangeRate > -4.1){
+				BattMode++;
+				//Log(LOG," CR> 4 BattMode  = %d\n\r",BattMode);
+				if(BattMode > 30){ //30 sensonds of AC 
+					ACPwrMode = ACON;
+					BattMode = 0;
+				}
+			}
+			else{
+				BattMode = 0;
+			}
+		}
 	}
 	else{
 		voltage = 0;
 		soc = 0;
 		alert = 0;
+		CellChangeRate = 0;
 	}
 }
 
@@ -58,6 +89,7 @@ void FGDisplay(){
 		//Serial.println();
 		Log(LOG," Cell V = %.1f\n\r",voltage);
 		Log(LOG," Cell SOC = %.1f\n\r",soc);
+		Log(LOG," Cell Change Rate = %.1f\n\r",CellChangeRate);
 	}
 	else{
 		//Serial.print("No FG");
@@ -72,6 +104,14 @@ float GetCellV(){
 
 float GetCellSoC(){
 	return soc;
+}
+
+float GetCellRate(){
+	return CellChangeRate;
+}
+
+String GetCellRateString(){
+	return String(CellChangeRate,1);
 }
 
 String GetCellVString(){
@@ -91,7 +131,19 @@ String GetCellSoCString(bool Round){
 }
 
 String GetPowerModeString(){
-	return "AC";
+	if(ACPwrMode == ACON){
+		return "AC";
+	}
+	else if(ACPwrMode == BUBON){
+		return "BUB";
+	}
+	else{
+		return "NA";
+	}
+}
+
+char GetPowerMode(){
+	return ACPwrMode;
 }
 
 bool GetCellAlert(){
