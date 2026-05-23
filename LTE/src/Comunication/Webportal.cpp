@@ -192,6 +192,35 @@ void handleTestPushover(AsyncWebServerRequest* req) {
     req->send(200, "application/json", "{\"ok\":true}");
 }
 
+void handleGetCellConfig(AsyncWebServerRequest* req) {
+    StaticJsonDocument<64> doc;
+    doc["heartbeatMins"] = GetHeartbeatMins();
+    sendJson(req, doc);
+}
+
+void handlePostCellConfig(AsyncWebServerRequest* req, uint8_t* data, size_t len, size_t, size_t) {
+    StaticJsonDocument<64> body;
+    if (deserializeJson(body, data, len) != DeserializationError::Ok) {
+        req->send(400, "application/json", "{\"ok\":false,\"err\":\"bad JSON\"}");
+        return;
+    }
+    unsigned int mins = body["heartbeatMins"] | GetHeartbeatMins();
+    if (mins < 1) mins = 1;
+    SetHeartbeatMins(mins);
+    req->send(200, "application/json", "{\"ok\":true}");
+}
+
+void handleApiPushoverStatus(AsyncWebServerRequest* req) {
+    char title[48], status[40];
+    bool ok = false;
+    CellLastPushover(title, &ok, status);
+    StaticJsonDocument<160> doc;
+    doc["title"]  = title;
+    doc["ok"]     = ok;
+    doc["status"] = status;
+    sendJson(req, doc);
+}
+
 /* ── Config: WiFi ───────────────────────────────────────── */
 void handleGetWifi(AsyncWebServerRequest* req) {
     StaticJsonDocument<256> doc;
@@ -293,7 +322,11 @@ void WebStart() {
     server.on("/config/pushover", HTTP_GET, handleGetPushover);
     server.on("/config/pushover", HTTP_POST, [](AsyncWebServerRequest* req){},
         NULL, handlePostPushover);
-    server.on("/api/pushover/test", HTTP_POST, handleTestPushover);
+    server.on("/api/pushover/test",   HTTP_POST, handleTestPushover);
+    server.on("/config/cellular", HTTP_GET, handleGetCellConfig);
+    server.on("/config/cellular", HTTP_POST, [](AsyncWebServerRequest* req){},
+        NULL, handlePostCellConfig);
+    server.on("/api/pushover/status", HTTP_GET,  handleApiPushoverStatus);
 
     server.serveStatic("/", LittleFS, "/");
     server.onNotFound([](AsyncWebServerRequest* req){ req->send(404); });

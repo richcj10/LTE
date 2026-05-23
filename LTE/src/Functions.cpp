@@ -38,9 +38,12 @@ char Startup(bool WifiEnable, bool LTEEnable){
         SetSerialLog(true);
     }
     if (WifiEnable) {
-        if (WiFiBootSequence() == 1) {
-            WebStart();
+        char wfr = WiFiBootSequence();
+        if (wfr == 1 || wfr == 2) {
+            WebStart();   /* main web UI serves in both STA and AP modes */
             OTAsetup();
+        }
+        if (wfr == 1) {
             MQTTStart();
         }
     }
@@ -71,6 +74,7 @@ void RunLoop(){
     OTAloop();
     WebHandel();
     LEDUpdate();
+    WiFiAPProcess();
     MqttLoop();
 
     if (GetRS485Mode()) RS485loop();
@@ -92,7 +96,7 @@ void RunLoop(){
 
     if (millis() - MQTTUpdatePreviousMillis >= MQTT_UPDATE_LOOP) {
         MQTTUpdatePreviousMillis = millis();
-        if (WiFi.status() != WL_CONNECTED) {
+        if (!WiFiIsAPMode() && WiFi.status() != WL_CONNECTED) {
             WiFi.disconnect();
             WiFi.reconnect();
             WiFiErrorCount++;

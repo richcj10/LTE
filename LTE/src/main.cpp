@@ -13,7 +13,7 @@ const long interval = 00;           // interval at which to blink (milliseconds)
 
 
 void setup() {
-  LogSetup(DEBUG,1);
+  LogSetup(NOTIFY,1);
   Startup(1,1);
   Log(NOTIFY,"Started Main Program, took %lu mS\n\r",millis());
 

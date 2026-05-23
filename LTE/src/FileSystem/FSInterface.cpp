@@ -6,11 +6,13 @@ WiFiConfig     wfconfig;
 MQTTConfig     mqconfig;
 SystemConfig   sysconfig;
 PushoverConfig pvconfig;
+CellularConfig cellconfig;
 
 static bool _needsAP = false;
 
 char FileStstemStart(){
     char result = FileSystemInit(&wfconfig, &mqconfig, &sysconfig, &pvconfig);
+    CellularComfig(&cellconfig);
     _needsAP = (result == 2);
     return (result == 0) ? 0 : 1;
 }
@@ -68,6 +70,12 @@ void SetPushoverConfig(unsigned char enabled, const char* token, const char* use
     strlcpy(pvconfig.token,   token,   sizeof(pvconfig.token));
     strlcpy(pvconfig.userKey, userKey, sizeof(pvconfig.userKey));
     PushoversaveConfiguration(&pvconfig);
+}
+
+unsigned int GetHeartbeatMins() { return cellconfig.heartbeatMins; }
+void SetHeartbeatMins(unsigned int mins) {
+    cellconfig.heartbeatMins = mins;
+    CellularsaveConfiguration(&cellconfig);
 }
 
 void SaveWifiToNVS(const char* ssid, const char* pass, const char* host) {

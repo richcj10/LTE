@@ -28,6 +28,9 @@ void PrintMqttConfigStruct(struct MQTTConfig* MQC);
 void WifiComfig(struct WiFiConfig* WFC);
 void MqttComfig(struct MQTTConfig* MQC);
 void PushoverComfig(struct PushoverConfig* PVC);
+void CellularComfig(struct CellularConfig* CC);
+void CellularloadConfiguration(struct CellularConfig* CC);
+void CellularsaveConfiguration(struct CellularConfig* CC);
 void SaveHostName(struct WiFiConfig* WFC);
 
 struct WiFiConfig {
@@ -57,6 +60,10 @@ struct PushoverConfig {
   unsigned char enabled = 0;
   char token[48]   = "";
   char userKey[48] = "";
+};
+
+struct CellularConfig {
+  unsigned int heartbeatMins = 360;   /* duty-cycle sleep interval, default 6 h */
 };
 
 

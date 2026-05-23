@@ -37,4 +37,7 @@ String CellLONString();
 void   CellularDisplay();
 bool   SendTextMsg();
 
+/* Last Pushover result — titleOut[48], statusOut[40] */
+void   CellLastPushover(char* titleOut, bool* okOut, char* statusOut);
+
 #endif

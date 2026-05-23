@@ -87,9 +87,9 @@ void FGDisplay(){
 		//Serial.print("Alert: ");
 		//Serial.println(alert);
 		//Serial.println();
-		Log(LOG," Cell V = %.1f\n\r",voltage);
-		Log(LOG," Cell SOC = %.1f\n\r",soc);
-		Log(LOG," Cell Change Rate = %.1f\n\r",CellChangeRate);
+		Log(DEBUG," Cell V = %.1f\n\r",voltage);
+		Log(DEBUG," Cell SOC = %.1f\n\r",soc);
+		Log(DEBUG," Cell Change Rate = %.1f\n\r",CellChangeRate);
 	}
 	else{
 		//Serial.print("No FG");

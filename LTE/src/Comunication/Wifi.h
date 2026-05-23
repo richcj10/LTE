@@ -3,14 +3,17 @@
 
 #include <Arduino.h>
 
-/* Blocking boot-time state machine.
-   - Tries NVS creds for up to 30 s.
-   - Falls back to AP mode ("LTE-Setup") for up to 5 min.
-   - If user submits config → saves to NVS → restarts.
-   - If AP times out → retries NVS. Loops forever until connected.
-   Returns 1 when STA WiFi is up. */
+/* Tries NVS credentials for up to 30 s.
+   Returns 1 = STA connected, 2 = AP mode started (non-blocking).
+   In AP mode, call WiFiAPProcess() from the main loop. */
 char WiFiBootSequence();
 
+/* Must be called every loop iteration. No-op when in STA mode.
+   Processes captive-portal DNS and restarts after AP_TIMEOUT_MS
+   if stored credentials exist. */
+void WiFiAPProcess();
+
+bool   WiFiIsAPMode();
 String GetIP();
 String GetMAC();
 String GetRSSIStr();

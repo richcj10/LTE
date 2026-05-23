@@ -16,7 +16,6 @@
 #define TXD2 16
 
 static Adafruit_FONA_LTE fona;
-static char replybuffer[255];
 
 // ── State machine ─────────────────────────────────────────────
 enum CellState : uint8_t {
@@ -34,11 +33,11 @@ enum CellState : uint8_t {
   CS_ERROR
 };
 
-#define CELL_SLEEP_MS  (6UL * 3600UL * 1000UL)   /* 6 hours */
+/* Sleep duration is read from config at runtime via GetHeartbeatMins() */
 
 // ── Job queue ─────────────────────────────────────────────────
 #define JOB_PUSHOVER  1
-#define JOB_QUEUE_LEN 4
+#define JOB_QUEUE_LEN 8
 
 struct CellJob {
   uint8_t type;
@@ -60,6 +59,11 @@ static volatile int8_t  _rssi           = 0;
 static volatile uint8_t _lteStatus      = 0;
 static char             _statusStr[24]  = "Offline";
 static char             _simCCID[21]    = "—";
+
+/* ── Last Pushover result (mutex-protected, read by web portal) ──────── */
+static char _lastPovrTitle[48]  = "—";
+static bool _lastPovrOk         = false;
+static char _lastPovrStatus[40] = "No result yet";
 
 // ── GPS ───────────────────────────────────────────────────────
 static volatile bool  _gpsEnabled       = false;
@@ -139,9 +143,14 @@ static void logModemDiag() {
 static void doHTTPPushover(const char* title, const char* message) {
   if (!GetPushoverEnabled()) {
     Log(NOTIFY, "POVR: disabled\n");
+    xSemaphoreTake(_mutex, portMAX_DELAY);
+    strlcpy(_lastPovrTitle,  title,     sizeof(_lastPovrTitle));
+    _lastPovrOk = false;
+    strlcpy(_lastPovrStatus, "Disabled", sizeof(_lastPovrStatus));
+    xSemaphoreGive(_mutex);
     return;
   }
-  char url[32]  = "api.pushover.net";
+  char url[32] = "api.pushover.net";
   char body[300];
   String token   = GetPushoverToken();
   String userKey = GetPushoverUserKey();
@@ -150,11 +159,24 @@ static void doHTTPPushover(const char* title, const char* message) {
     token.c_str(), userKey.c_str(),
     urlencode(String(title)).c_str(),
     urlencode(String(message)).c_str());
+
+  /* Preserve original ordering: ssl before connect.
+     The modem keeps HTTPSSL state and HTTP_connect (AT+HTTPINIT) honours it.
+     Do NOT call AT+HTTPTERM — the library manages session lifetime. */
   fona.HTTP_ssl(true);
   fona.HTTP_connect(url);
+  Log(NOTIFY, "POVR: sending \"%s\"\n", title);
   vTaskDelay(pdMS_TO_TICKS(500));
   char result = fona.HTTP_POST("/1/messages.json", body, bodyLen, 10000);
-  Log(NOTIFY, "POVR Result = %d\n", result);
+
+  bool ok = (result != 0);
+  Log(ok ? NOTIFY : ERROR, "POVR: %s — \"%s\"\n", ok ? "OK" : "FAILED", title);
+
+  xSemaphoreTake(_mutex, portMAX_DELAY);
+  strlcpy(_lastPovrTitle,  title,     sizeof(_lastPovrTitle));
+  _lastPovrOk = ok;
+  strlcpy(_lastPovrStatus, ok ? "OK" : "FAILED", sizeof(_lastPovrStatus));
+  xSemaphoreGive(_mutex);
 }
 
 static void sendStatusNotify(bool isStartup) {
@@ -187,9 +209,10 @@ static const char* stateLabel(CellState s) {
 }
 
 static void cellTask(void*) {
-  CellState  state     = CS_BOOT;
-  uint8_t    retries   = 0;
-  TickType_t watchdogAt = 0;
+  CellState  state        = CS_BOOT;
+  uint8_t    retries      = 0;
+  uint8_t    bootFailCount = 0;   /* CS_ERROR hits in a row; reset on CS_CONNECTED */
+  TickType_t watchdogAt   = 0;
 
   for (;;) {
     _cellState = state;
@@ -199,12 +222,11 @@ static void cellTask(void*) {
         Log(NOTIFY, "Cell: booting modem\n");
         pinMode(FONA_RST,    OUTPUT);
         pinMode(FONA_PWRKEY, OUTPUT);
-        digitalWrite(FONA_RST, LOW);
-        vTaskDelay(pdMS_TO_TICKS(1000));   /* hold RST low 1s (match original) */
-        digitalWrite(FONA_RST, HIGH);
-        vTaskDelay(pdMS_TO_TICKS(500));
+        digitalWrite(FONA_RST, HIGH);      /* ensure RST not asserted */
+        /* Modem is fully off after CS_POWER_DOWN — PWRKEY pulse powers it on.
+           Do NOT pulse RST here: that resets an ON modem, not relevant when off. */
         fona.powerOn(FONA_PWRKEY);
-        vTaskDelay(pdMS_TO_TICKS(4000));   /* give modem time to boot */
+        vTaskDelay(pdMS_TO_TICKS(4000));   /* wait for modem to boot */
         state = CS_INIT;
         break;
 
@@ -285,7 +307,7 @@ static void cellTask(void*) {
           Log(NOTIFY, "Cell: CEREG=%d  CSQ=%d  RSSI=%s\n",
               eps, csq, csq == 99 ? "no signal" : String((int)_rssi).c_str());
         }
-        if (eps == 1 || eps == 5) {
+        if ((eps == 1 || eps == 5) && csq != 99) {
           Log(NOTIFY, "Cell: LTE registered (%s)\n",
               eps == 5 ? "roaming" : "home");
           retries = 0;
@@ -371,6 +393,7 @@ static void cellTask(void*) {
       }
 
       case CS_CONNECTED: {
+        bootFailCount = 0;   /* successful connection — reset error counter */
         /* Drain all pending notification jobs before shutting down */
         CellJob job;
         while (xQueueReceive(_jobQueue, &job, 0) == pdTRUE) {
@@ -384,56 +407,106 @@ static void cellTask(void*) {
         break;
       }
 
-      case CS_POWER_DOWN:
+      case CS_POWER_DOWN: {
+        /* Mark disconnected BEFORE the drain so any concurrent Pushover() on Core 1
+           will see _lteConnected==false and correctly set _wakeRequested. */
+        _lteConnected  = false;
+        _wakeRequested = false;
+        /* Drain any jobs that arrived after the CS_CONNECTED drain */
+        CellJob lateJob;
+        while (xQueueReceive(_jobQueue, &lateJob, 0) == pdTRUE) {
+          if (lateJob.type == JOB_PUSHOVER) doHTTPPushover(lateJob.title, lateJob.message);
+        }
         Log(NOTIFY, "Cell: powering down\n");
-        /* Graceful AT shutdown */
+        /* Graceful AT shutdown — wait for "NORMAL POWER DOWN" URC (up to 8 s).
+           Do NOT pulse PWRKEY after this: from an OFF state PWRKEY LOW >1s = power ON,
+           which would immediately re-boot the modem. */
+        while (Serial1.available()) Serial1.read();   /* flush */
         Serial1.println("AT+CPOWD=1");
-        vTaskDelay(pdMS_TO_TICKS(2000));
-        /* PWRKEY pulse to guarantee off (SIM7000: >1.2 s low = power off) */
-        digitalWrite(FONA_PWRKEY, LOW);
-        vTaskDelay(pdMS_TO_TICKS(1500));
-        digitalWrite(FONA_PWRKEY, HIGH);
+        {
+          char buf[64] = {0};
+          size_t n = 0;
+          unsigned long t0 = millis();
+          while (millis() - t0 < 8000) {
+            while (Serial1.available() && n < sizeof(buf) - 1)
+              buf[n++] = (char)Serial1.read();
+            if (strstr(buf, "DOWN")) {
+              Log(NOTIFY, "Cell: AT power down confirmed\n");
+              break;
+            }
+            vTaskDelay(pdMS_TO_TICKS(200));
+          }
+          if (!strstr(buf, "DOWN")) {
+            /* AT command not confirmed — force off with PWRKEY from an ON state */
+            Log(ERROR, "Cell: no AT confirmation — PWRKEY force off\n");
+            digitalWrite(FONA_PWRKEY, LOW);
+            vTaskDelay(pdMS_TO_TICKS(2500));   /* SIM7000: >1.2 s from ON = power off */
+            digitalWrite(FONA_PWRKEY, HIGH);
+            vTaskDelay(pdMS_TO_TICKS(1000));
+          }
+        }
         vTaskDelay(pdMS_TO_TICKS(500));
-        _lteOn          = false;
-        _lteConnected   = false;
-        _radioRestarted = false;   /* full re-init required next boot */
-        _wakeRequested  = false;
+        _lteOn = false;
+        /* _radioRestarted intentionally NOT cleared — LTE mode is stored in modem NVRAM */
         setStatus("Sleeping");
-        Log(NOTIFY, "Cell: modem off — sleeping %lu h\n", CELL_SLEEP_MS / 3600000UL);
+        Log(NOTIFY, "Cell: modem off — sleeping %u min\n", GetHeartbeatMins());
         state = CS_SLEEP_WAIT;
         break;
+      }
 
       case CS_SLEEP_WAIT: {
+        unsigned long sleepMs = (unsigned long)GetHeartbeatMins() * 60UL * 1000UL;
+        Log(NOTIFY, "Cell: sleeping %u min\n", GetHeartbeatMins());
         /* Sleep in 10 s chunks so an on-demand wake request is noticed quickly */
         unsigned long elapsed = 0;
-        while (elapsed < CELL_SLEEP_MS) {
+        while (elapsed < sleepMs) {
           if (_wakeRequested) {
             Log(NOTIFY, "Cell: on-demand wake (pending notification)\n");
             break;
           }
-          unsigned long chunk = (CELL_SLEEP_MS - elapsed < 10000UL)
-                                 ? (CELL_SLEEP_MS - elapsed) : 10000UL;
+          unsigned long chunk = (sleepMs - elapsed < 10000UL)
+                                 ? (sleepMs - elapsed) : 10000UL;
           vTaskDelay(pdMS_TO_TICKS(chunk));
           elapsed += chunk;
         }
-        if (elapsed >= CELL_SLEEP_MS)
-          Log(NOTIFY, "Cell: scheduled wake after %lu h\n", CELL_SLEEP_MS / 3600000UL);
-        _wakeRequested = false;
+        if (elapsed >= sleepMs)
+          Log(NOTIFY, "Cell: scheduled wake after %u min\n", GetHeartbeatMins());
         retries = 0;
         state   = CS_BOOT;
+        /* _wakeRequested is cleared at the top of CS_POWER_DOWN on the next cycle */
         break;
       }
 
       case CS_WATCHDOG:   /* fallthrough — not used in duty-cycle mode */
 
       case CS_ERROR:
-        Log(ERROR, "Cell: error state — retry in 60s\n");
         _lteOn        = false;
         _lteConnected = false;
-        setStatus("Error");
-        vTaskDelay(pdMS_TO_TICKS(60000));
-        retries = 0;
-        state   = CS_BOOT;
+        bootFailCount++;
+        if (bootFailCount >= 6) {
+          /* 6 consecutive failures — give up, go to sleep */
+          Log(ERROR, "Cell: %d boot failures — sleeping\n", bootFailCount);
+          setStatus("Boot failed");
+          bootFailCount = 0;
+          retries = 0;
+          state   = CS_SLEEP_WAIT;
+        } else if (bootFailCount == 3) {
+          /* 3 failures — hardware modem reset before next attempt */
+          Log(ERROR, "Cell: 3 failures — PWRKEY modem reset (attempt %d/6)\n", bootFailCount);
+          setStatus("Modem reset");
+          digitalWrite(FONA_PWRKEY, LOW);
+          vTaskDelay(pdMS_TO_TICKS(1500));
+          digitalWrite(FONA_PWRKEY, HIGH);
+          vTaskDelay(pdMS_TO_TICKS(3000));
+          retries = 0;
+          state   = CS_BOOT;
+        } else {
+          Log(ERROR, "Cell: error (attempt %d/6) — retry in 60s\n", bootFailCount);
+          setStatus("Error");
+          vTaskDelay(pdMS_TO_TICKS(60000));
+          retries = 0;
+          state   = CS_BOOT;
+        }
         break;
     }
   }
@@ -519,3 +592,11 @@ void CellularDisplay() {
 }
 
 bool SendTextMsg() { return false; }
+
+void CellLastPushover(char* titleOut, bool* okOut, char* statusOut) {
+  xSemaphoreTake(_mutex, portMAX_DELAY);
+  strlcpy(titleOut,  _lastPovrTitle,  48);
+  *okOut = _lastPovrOk;
+  strlcpy(statusOut, _lastPovrStatus, 40);
+  xSemaphoreGive(_mutex);
+}

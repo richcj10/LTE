@@ -27,6 +27,10 @@ String        GetPushoverToken();
 String        GetPushoverUserKey();
 void          SetPushoverConfig(unsigned char enabled, const char* token, const char* userKey);
 
+/* Cellular config accessors */
+unsigned int GetHeartbeatMins();
+void         SetHeartbeatMins(unsigned int mins);
+
 /* Called by AP-mode submit handler to persist new credentials */
 void SaveWifiToNVS(const char* ssid, const char* pass, const char* host);
 void SaveMQTTToNVS(const char* ip, unsigned int port, const char* user, const char* pass, unsigned char enabled);

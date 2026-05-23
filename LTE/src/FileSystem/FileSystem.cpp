@@ -15,6 +15,7 @@ const char *WiFifilename      = "/WiFiconfig.json";
 const char *MQTTfilename      = "/MQTTconfig.json";
 const char *Systemfilename    = "/system.json";
 const char *Pushoverfilename  = "/Pushoverconfig.json";
+const char *Cellularfilename  = "/Cellularconfig.json";
 const char *MQTTTopicsfilename = "/MQTTcTopics.json";
 const char *Remotefilename    = "/Remote.json";
 
@@ -356,6 +357,34 @@ void PushoversaveConfiguration(struct PushoverConfig* PVC) {
     doc["userKey"] = PVC->userKey;
     if (serializeJson(doc, file) == 0)
       Log(ERROR, "Failed to write Pushover config file\n");
+    file.close();
+  }
+}
+
+void CellularComfig(struct CellularConfig* CC) {
+  if (LittleFS.exists(Cellularfilename)) {
+    CellularloadConfiguration(CC);
+  } else {
+    CellularsaveConfiguration(CC);   /* write defaults on first boot */
+  }
+}
+
+void CellularloadConfiguration(struct CellularConfig* CC) {
+  File file = LittleFS.open(Cellularfilename);
+  StaticJsonDocument<64> doc;
+  if (deserializeJson(doc, file) == DeserializationError::Ok)
+    CC->heartbeatMins = doc["heartbeatMins"] | 360;
+  file.close();
+}
+
+void CellularsaveConfiguration(struct CellularConfig* CC) {
+  LittleFS.remove(Cellularfilename);
+  File file = LittleFS.open(Cellularfilename, "w");
+  if (file) {
+    StaticJsonDocument<64> doc;
+    doc["heartbeatMins"] = CC->heartbeatMins;
+    if (serializeJson(doc, file) == 0)
+      Log(ERROR, "Failed to write Cellular config file\n");
     file.close();
   }
 }

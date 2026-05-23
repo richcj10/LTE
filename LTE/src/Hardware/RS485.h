@@ -22,7 +22,7 @@
 #define RS485_INP_GPS_SPEED     14  /* Speed ×10 km/h                      */
 
 #define RS485_DEVICE_VERSION    2   /* Increment when register map changes */
-#define RS485_DEVICE_ID         3   /* Device type identifier              */
+#define RS485_DEVICE_ID         3   /* Device type identifier (LTE-Monitor) */
 
 /* ── Holding register user indices (master can read/write) ────────────── */
 #define RS485_HOLD_FLAGS        0   /* Bit 0: serial debug enable            */
