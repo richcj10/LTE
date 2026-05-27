@@ -1493,7 +1493,7 @@ boolean Adafruit_FONA_LTE::HTTP_GET(const char *URI) {
   return true;
 }
 
-boolean Adafruit_FONA_LTE::HTTP_POST(const char *URI,const char *body, uint8_t bodylen, uint16_t Timeout) {
+boolean Adafruit_FONA_LTE::HTTP_POST(const char *URI,const char *body, uint16_t bodylen, uint16_t Timeout) {
   // Use fona.HTTP_addHeader() as needed before using this function
   // Then use fona.HTTP_connect() to connect to the server first
   char cmdBuff[400]; // Make sure this is large enough for URI

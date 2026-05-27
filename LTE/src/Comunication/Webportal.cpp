@@ -81,7 +81,7 @@ void handleApiStatus(AsyncWebServerRequest* req) {
     doc["rserr"] = 0;
     doc["wifi"]  = (GetWiFiStatus() == 1);
     doc["mqtt"]  = (GetMQTTStatus() == 1);
-    doc["cell"]  = (CellSig() != 0);
+    doc["cell"]  = CellIsConnected();
     sendJson(req, doc);
 }
 

@@ -371,7 +371,7 @@ class Adafruit_FONA_LTE : public Adafruit_FONA {
   boolean HTTP_addHeader(const char *type, const char *value, uint16_t maxlen); // max length of value
   boolean HTTP_addPara(const char *key, const char *value, uint16_t maxlen); // max length of value
   boolean HTTP_GET(const char *URI);
-  boolean HTTP_POST(const char *URI,const char *body, uint8_t bodylen, uint16_t Timeout);
+  boolean HTTP_POST(const char *URI,const char *body, uint16_t bodylen, uint16_t Timeout);
 };
 
 #endif

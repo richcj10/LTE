@@ -35,7 +35,7 @@ String CellGPSString();
 String CellLATString();
 String CellLONString();
 void   CellularDisplay();
-bool   SendTextMsg();
+bool   SendTextMsg(const char* number, const char* message);
 
 /* Last Pushover result — titleOut[48], statusOut[40] */
 void   CellLastPushover(char* titleOut, bool* okOut, char* statusOut);
