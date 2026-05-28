@@ -373,7 +373,7 @@ void CellularloadConfiguration(struct CellularConfig* CC) {
   File file = LittleFS.open(Cellularfilename);
   StaticJsonDocument<64> doc;
   if (deserializeJson(doc, file) == DeserializationError::Ok)
-    CC->heartbeatMins = doc["heartbeatMins"] | 360;
+    CC->heartbeatMins = doc["heartbeatMins"] | 10;
   file.close();
 }
 

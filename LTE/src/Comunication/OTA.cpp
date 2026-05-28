@@ -3,11 +3,13 @@
 #include "Hardware/Log.h"
 #include "Hardware/LED.h"
 #include "FileSystem/FSInterface.h"
+#include "Functions.h"
 
 static bool _otaActive = false;
 
 void OTAsetup() {
-    ArduinoOTA.setHostname(GetHostName().c_str());
+    String hn = GetUniqueName(); hn.replace(":", "");
+    ArduinoOTA.setHostname(hn.c_str());
 
     ArduinoOTA.onStart([]() {
         _otaActive = true;
@@ -37,7 +39,7 @@ void OTAsetup() {
     });
 
     ArduinoOTA.begin();
-    Log(NOTIFY, "OTA ready on host: %s\n", GetHostName().c_str());
+    Log(NOTIFY, "OTA ready on host: %s\n", hn.c_str());
 }
 
 void OTAloop() {

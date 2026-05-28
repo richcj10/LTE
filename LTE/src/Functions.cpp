@@ -110,7 +110,7 @@ void DebugPrint(){
     if (millis() - DebugPreviousMillis >= DEBUG_LOOP) {
         DebugPreviousMillis = millis();
         FGDisplay();
-        CellularDisplay();
+        // CellularDisplay();
         PrintTime();
     }
 }

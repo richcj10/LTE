@@ -5,6 +5,7 @@
 #include "Hardware/Log.h"
 #include "Define.h"
 #include "FileSystem/FSInterface.h"
+#include "Functions.h"
 #include <NTPClient.h>
 #include <WiFiUdp.h>
 
@@ -54,7 +55,8 @@ char WiFiBootSequence() {
     WiFi.mode(WIFI_OFF);
     delay(1000);
     WiFi.mode(WIFI_STA);
-    WiFi.setHostname(GetHostName().c_str());
+    String hn = GetUniqueName(); hn.replace(":", "");
+    WiFi.setHostname(hn.c_str());
     WiFi.begin(ssid.c_str(), pass.c_str());
     unsigned long t0 = millis();
     while (WiFi.status() != WL_CONNECTED) {

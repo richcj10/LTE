@@ -59,8 +59,8 @@ boolean Adafruit_FONA::begin(Stream &port) {
   }
 
   //DEBUG_PRINTLN(F("Attempting to open comm with ATs"));
-  // give 7 seconds to reboot
-  int16_t timeout = 7000;
+  // give 2 seconds to reboot (CS_BOOT already confirmed modem state before calling this)
+  int16_t timeout = 2000;
 
   while (timeout > 0) {
     while (mySerial->available()) mySerial->read();

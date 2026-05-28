@@ -15,6 +15,10 @@
 #define RXD2 17
 #define TXD2 16
 
+/* Set 1 to log every AT command sent and every raw byte received.
+   Flip to 0 once the HTTPS issue is diagnosed. */
+#define CELL_AT_VERBOSE 0
+
 static Adafruit_FONA_LTE fona;
 
 // ── State machine ─────────────────────────────────────────────
@@ -27,7 +31,7 @@ enum CellState : uint8_t {
   CS_CHECK_SIM,
   CS_CONNECTING,
   CS_CONNECTED,       /* drain queue + send startup notify   */
-  CS_IDLE,            /* modem stays on — drain queue + heartbeat timer */
+  CS_IDLE,            /* modem stays on -- drain queue + heartbeat timer */
   CS_POWER_DOWN,      /* graceful modem shutdown (unused in always-on mode) */
   CS_SLEEP_WAIT,      /* duty-cycle sleep (unused in always-on mode)        */
   CS_WATCHDOG,
@@ -58,7 +62,7 @@ static volatile bool    _lteConnected   = false;
 static volatile int8_t  _rssi           = 0;
 static volatile uint8_t _lteStatus      = 0;
 static char             _statusStr[24]  = "Offline";
-static char             _simCCID[21]    = "\xe2\x80\x94";   /* — */
+static char             _simCCID[21]    = "\xe2\x80\x94";   /* -- */
 
 static char _lastPovrTitle[48]  = "\xe2\x80\x94";
 static bool _lastPovrOk         = false;
@@ -76,21 +80,16 @@ static volatile float _gpsHeading       = 0.0f;
 static volatile float _gpsAlt           = 0.0f;
 
 // ── Helpers ───────────────────────────────────────────────────
-static String urlencode(const String& str) {
-  String out = "";
-  for (int i = 0; i < (int)str.length(); i++) {
-    char c = str.charAt(i);
-    if (c == ' ') {
-      out += '+';
-    } else if (isalnum(c)) {
-      out += c;
-    } else {
-      char hi = (c >> 4) & 0xf;
-      char lo = c & 0xf;
-      out += '%';
-      out += (char)(hi > 9 ? hi - 10 + 'A' : hi + '0');
-      out += (char)(lo > 9 ? lo - 10 + 'A' : lo + '0');
-    }
+/* Sanitize a value for AT+SHPARA — pass raw like Python, only encode the three
+   chars that would break the AT command line or the quoted string delimiter. */
+static String shParamSanitize(const char* s) {
+  String out;
+  out.reserve(strlen(s) + 16);
+  for (; *s; s++) {
+    if      (*s == '\n') out += "%0A";
+    else if (*s == '\r') out += "%0D";
+    else if (*s == '"')  out += "%22";
+    else                 out += *s;
   }
   return out;
 }
@@ -106,10 +105,10 @@ static void updateRSSI(uint8_t n) {
   else if (n == 1)             _rssi = -111;
   else if (n == 31)            _rssi = -52;
   else if (n >= 2 && n <= 30) _rssi = (int8_t)map(n, 2, 30, -110, -54);
-  else                         _rssi = 0;
+  /* n==99 or other invalid: leave _rssi at its last known value */
 }
 
-/* Query EPS registration directly — bypasses FONA's sendParseReply lock. */
+/* Query EPS registration directly -- bypasses FONA's sendParseReply lock. */
 static uint8_t getEPSReg() {
   while (Serial1.available()) Serial1.read();
   Serial1.println("AT+CEREG?");
@@ -152,10 +151,23 @@ static bool atCmd(const char* cmd, const char* expect, uint32_t timeoutMs) {
     while (Serial1.available() && n < AT_RX_SIZE - 1)
       _atRxBuf[n++] = (char)Serial1.read();
     _atRxBuf[n] = '\0';
-    if (expect && strstr(_atRxBuf, expect)) return true;
-    if (strstr(_atRxBuf, "ERROR"))          return false;
+    if (expect && strstr(_atRxBuf, expect)) {
+#if CELL_AT_VERBOSE
+      Log(LOG, "[%s] << %s\n", cmd, _atRxBuf);
+#endif
+      return true;
+    }
+    if (strstr(_atRxBuf, "ERROR")) {
+#if CELL_AT_VERBOSE
+      Log(LOG, "[%s] << %s\n", cmd, _atRxBuf);
+#endif
+      return false;
+    }
     vTaskDelay(pdMS_TO_TICKS(10));
   }
+#if CELL_AT_VERBOSE
+  Log(LOG, "[%s] << TIMEOUT (%s)\n", cmd, _atRxBuf);
+#endif
   return false;
 }
 
@@ -171,9 +183,17 @@ static bool atCapture(const char* cmd, uint32_t timeoutMs) {
     while (Serial1.available() && n < AT_RX_SIZE - 1)
       _atRxBuf[n++] = (char)Serial1.read();
     _atRxBuf[n] = '\0';
-    if (strstr(_atRxBuf, "OK") || strstr(_atRxBuf, "ERROR")) return true;
+    if (strstr(_atRxBuf, "OK") || strstr(_atRxBuf, "ERROR")) {
+#if CELL_AT_VERBOSE
+      Log(LOG, "[%s] << %s\n", cmd, _atRxBuf);
+#endif
+      return true;
+    }
     vTaskDelay(pdMS_TO_TICKS(10));
   }
+#if CELL_AT_VERBOSE
+  if (n > 0) Log(LOG, "[%s] << TIMEOUT (%s)\n", cmd, _atRxBuf);
+#endif
   return n > 0;
 }
 
@@ -186,10 +206,23 @@ static bool atWaitURC(const char* urc, const char* fail, uint32_t timeoutMs) {
     while (Serial1.available() && n < AT_RX_SIZE - 1)
       _atRxBuf[n++] = (char)Serial1.read();
     _atRxBuf[n] = '\0';
-    if (urc  && strstr(_atRxBuf, urc))  return true;
-    if (fail && strstr(_atRxBuf, fail)) return false;
+    if (urc  && strstr(_atRxBuf, urc))  {
+#if CELL_AT_VERBOSE
+      Log(LOG, "[URC wait=%s] << %s\n", urc, _atRxBuf);
+#endif
+      return true;
+    }
+    if (fail && strstr(_atRxBuf, fail)) {
+#if CELL_AT_VERBOSE
+      Log(LOG, "[URC wait=%s] << FAIL: %s\n", urc, _atRxBuf);
+#endif
+      return false;
+    }
     vTaskDelay(pdMS_TO_TICKS(10));
   }
+#if CELL_AT_VERBOSE
+  Log(LOG, "[URC wait=%s] << TIMEOUT (%s)\n", urc, _atRxBuf);
+#endif
   return false;
 }
 
@@ -209,13 +242,13 @@ static uint8_t readCSQ() {
 static void logModemDiag() {
   uint8_t csq = readCSQ();
   Log(LOG, "  CSQ raw=%d  RSSI=%d dBm\n", csq, (int)_rssi);
-  if (atCapture("AT+CEREG?", 2000)) Log(LOG, "  %s\n", _atRxBuf);
-  if (atCapture("AT+CPSI",   5000)) Log(LOG, "  %s\n", _atRxBuf);
+  atCapture("AT+CEREG?", 2000);   /* result visible via CELL_AT_VERBOSE */
+  atCapture("AT+COPS?",  3000);   /* AT+CPSI not supported on this firmware */
 }
 
 // ── Clock management ──────────────────────────────────────────
 // TLS handshakes require a valid wall-clock time. The SIM7070G boots with
-// its clock at 1980-01-06 (epoch 0) — every server cert appears expired,
+// its clock at 1980-01-06 (epoch 0) -- every server cert appears expired,
 // causing AT+SHCONN to fail. We sync from the network via AT+CTZU and fall
 // back to the firmware build date when the network has no NTP coverage yet.
 
@@ -257,10 +290,13 @@ static void clockInit() {
     }
   }
   if (!clockIsValid()) {
-    Log(NOTIFY, "Cell: no network time — using build date\n");
+    Log(NOTIFY, "Cell: no network time -- using build date\n");
     clockSetFromBuildDate();
   }
 }
+
+// ── HTTPS session helpers (forward declarations) ──────────────
+static void shDrainRead(int dlen);
 
 // ── Bearer management ─────────────────────────────────────────
 // SIM7070G data bearer: AT+CNACT=0,1 activates PDP context 0.
@@ -294,8 +330,7 @@ static bool bearerActivate(uint8_t maxRetries = 3) {
 static void shCleanup() {
   atCapture("AT+SHSTATE?", 3000);
   if (strstr(_atRxBuf, "+SHSTATE: 1")) {
-    vTaskDelay(pdMS_TO_TICKS(200));
-    while (Serial1.available()) Serial1.read();   /* drain any pending body */
+    shDrainRead(512);   /* drain any unread body -- SHDISC fails if body is pending */
     atCmd("AT+SHDISC", "OK", 10000);
   }
   vTaskDelay(pdMS_TO_TICKS(200));
@@ -308,7 +343,7 @@ static bool shConnect() {
   atCmd("AT+SHCONF=\"URL\",\"https://api.pushover.net\"", "OK", 3000);
   atCmd("AT+SHCONF=\"BODYLEN\",1024",               "OK", 3000);
   atCmd("AT+SHCONF=\"HEADERLEN\",350",              "OK", 3000);
-  return atCmd("AT+SHCONN", "OK", 30000);           /* TLS handshake — up to 30 s */
+  return atCmd("AT+SHCONN", "OK", 30000);           /* TLS handshake -- up to 30 s */
 }
 
 static void shDrainRead(int dlen) {
@@ -325,9 +360,9 @@ static void shDrainRead(int dlen) {
     while (Serial1.available() && n < AT_RX_SIZE - 1)
       _atRxBuf[n++] = (char)Serial1.read();
     _atRxBuf[n] = '\0';
-    /* Wait for +SHREAD: header AND OK/ERROR before declaring done */
-    if (strstr(_atRxBuf, "+SHREAD:") &&
-        (strstr(_atRxBuf, "OK") || strstr(_atRxBuf, "ERROR"))) {
+    /* +SHREAD: data arrives before OK; ERROR alone means no pending body */
+    if (strstr(_atRxBuf, "ERROR") ||
+        (strstr(_atRxBuf, "+SHREAD:") && strstr(_atRxBuf, "OK"))) {
       vTaskDelay(pdMS_TO_TICKS(200));   /* let trailing bytes settle */
       while (Serial1.available() && n < AT_RX_SIZE - 1)
         _atRxBuf[n++] = (char)Serial1.read();
@@ -354,12 +389,10 @@ static int shPost(const char* title, const char* message) {
   snprintf(cmd, sizeof(cmd), "AT+SHPARA=\"user\",\"%s\"", userKey.c_str());
   atCmd(cmd, "OK", 3000);
 
-  String encTitle = urlencode(String(title));
-  snprintf(cmd, sizeof(cmd), "AT+SHPARA=\"title\",\"%s\"", encTitle.c_str());
+  snprintf(cmd, sizeof(cmd), "AT+SHPARA=\"title\",\"%s\"", shParamSanitize(title).c_str());
   atCmd(cmd, "OK", 3000);
 
-  String encMsg = urlencode(String(message));
-  snprintf(cmd, sizeof(cmd), "AT+SHPARA=\"message\",\"%s\"", encMsg.c_str());
+  snprintf(cmd, sizeof(cmd), "AT+SHPARA=\"message\",\"%s\"", shParamSanitize(message).c_str());
   atCmd(cmd, "OK", 3000);
 
   atFlush();
@@ -389,7 +422,8 @@ static int shPost(const char* title, const char* message) {
 }
 
 static void shDisconnect() {
-  atCmd("AT+SHDISC", "OK", 10000);
+  if (!atCmd("AT+SHDISC", "OK", 10000))
+    shCleanup();   /* SHDISC failed (unread body) -- drain and retry */
   vTaskDelay(pdMS_TO_TICKS(200));
 }
 
@@ -425,7 +459,7 @@ static bool smsSend(const char* number, const char* message) {
   Serial1.print(message);
   Serial1.write(0x1A);
 
-  /* Wait for +CMGS: <mr> OK — up to 60 s per spec */
+  /* Wait for +CMGS: <mr> OK -- up to 60 s per spec */
   _atRxBuf[0] = '\0';
   n = 0;
   t0 = millis();
@@ -457,7 +491,7 @@ static void doSMSSend(const char* number, const char* message) {
 
 // ── GNSS ──────────────────────────────────────────────────────
 // AT+CGNSPWR=1/0  : power the GNSS receiver on or off.
-// AT+CGNSINF      : poll navigation info — simple request/response, no URCs.
+// AT+CGNSINF      : poll navigation info -- simple request/response, no URCs.
 //
 // +CGNSINF response fields (Table 8-1):
 //   1  GNSS run status (1=on)
@@ -535,9 +569,8 @@ static void doHTTPPushover(const char* title, const char* message) {
   for (uint8_t attempt = 0; attempt < 3; attempt++) {
     if (attempt > 0) {
       Log(NOTIFY, "POVR: retry %d/3\n", attempt + 1);
-      shCleanup();
       if (!bearerIsActive()) {
-        Log(NOTIFY, "POVR: bearer lost — reactivating\n");
+        Log(NOTIFY, "POVR: bearer lost -- reactivating\n");
         bearerActivate(2);
         vTaskDelay(pdMS_TO_TICKS(2000));
       }
@@ -550,7 +583,6 @@ static void doHTTPPushover(const char* title, const char* message) {
 
     if (!shConnect()) {
       Log(ERROR, "POVR: HTTPS connect failed (attempt %d/3)\n", attempt + 1);
-      shCleanup();
       continue;
     }
 
@@ -559,7 +591,7 @@ static void doHTTPPushover(const char* title, const char* message) {
 
     if (status == 200) break;
     if (status >= 400 && status < 500) {
-      Log(ERROR, "POVR: HTTP %d — no retry\n", status);
+      Log(ERROR, "POVR: HTTP %d -- no retry\n", status);
       break;   /* auth/client error, retrying won't help */
     }
     if (status > 0)
@@ -584,9 +616,15 @@ static void doHTTPPushover(const char* title, const char* message) {
 
 static void sendStatusNotify(bool isStartup) {
   char msg[160];
-  snprintf(msg, sizeof(msg),
-    "%s\nBatt: %.1f%% @ %.2fV\nRSSI: %d dBm",
-    _deviceName, GetCellSoC(), GetCellV(), (int)_rssi);
+  if (_rssi != 0) {
+    snprintf(msg, sizeof(msg),
+      "%s Batt: %.1f%% @ %.2fV RSSI: %d dBm",
+      _deviceName, GetCellSoC(), GetCellV(), (int)_rssi);
+  } else {
+    snprintf(msg, sizeof(msg),
+      "%s Batt: %.1f%% @ %.2fV RSSI: N/A",
+      _deviceName, GetCellSoC(), GetCellV());
+  }
   doHTTPPushover(isStartup ? "LTE Online - Boot" : "LTE Heartbeat", msg);
 }
 
@@ -627,8 +665,29 @@ static void cellTask_full(void*) {
         pinMode(FONA_RST,    OUTPUT);
         pinMode(FONA_PWRKEY, OUTPUT);
         digitalWrite(FONA_RST, HIGH);
-        fona.powerOn(FONA_PWRKEY);
-        vTaskDelay(pdMS_TO_TICKS(4000));
+        if (!atCmd("AT", "OK", 3000)) {
+          /* RST cycle first: safe for both on-but-hung and off states.
+             If modem is off RST does nothing and AT will still fail,
+             so we fall through to PWRKEY. */
+          Log(NOTIFY, "Cell: no response -- RST cycle\n");
+          digitalWrite(FONA_RST, LOW);
+          vTaskDelay(pdMS_TO_TICKS(500));
+          digitalWrite(FONA_RST, HIGH);
+          vTaskDelay(pdMS_TO_TICKS(8000));
+          if (!atCmd("AT", "OK", 3000)) {
+            Log(NOTIFY, "Cell: RST no response -- PWRKEY power on\n");
+            fona.powerOn(FONA_PWRKEY);
+            vTaskDelay(pdMS_TO_TICKS(8000));
+          } else {
+            Log(NOTIFY, "Cell: modem up after RST\n");
+            _lteOn          = true;
+            _radioRestarted = true;
+          }
+        } else {
+          Log(NOTIFY, "Cell: modem already on\n");
+          _lteOn          = true;
+          _radioRestarted = true;
+        }
         state = CS_INIT;
         break;
 
@@ -641,7 +700,7 @@ static void cellTask_full(void*) {
                AT+CNMP/CMNB are stored in NVRAM but need CFUN=1,1 to take effect. */
             fona.sendCheckReply(F("AT+CNMP=38"), F("OK"), 2000);   /* LTE only      */
             fona.sendCheckReply(F("AT+CMNB=3"),  F("OK"), 2000);   /* Cat-M1+NB-IoT */
-            Log(NOTIFY, "Cell: LTE mode saved — RST cycle\n");
+            Log(NOTIFY, "Cell: LTE mode saved -- RST cycle\n");
             _radioRestarted = true;
             _lteOn = false;
             while (Serial1.available()) Serial1.read();
@@ -652,6 +711,7 @@ static void cellTask_full(void*) {
             state = CS_INIT;
           } else {
             Log(NOTIFY, "Cell: LTE Cat-M1+NB-IoT active\n");
+            atCmd("AT+CMEE=2", "OK", 2000);   /* verbose error strings from modem */
             retries = 0;
             state   = CS_SET_APN;
           }
@@ -681,10 +741,20 @@ static void cellTask_full(void*) {
         Log(NOTIFY, "Cell: setting APN hologram\n");
         fona.setNetworkSettings(F("hologram"));
         vTaskDelay(pdMS_TO_TICKS(1000));
-        if (atCapture("AT+CPIN?", 5000))  Log(LOG, "  %s\n", _atRxBuf);
-        if (atCapture("AT+CFUN?", 2000))  Log(LOG, "  %s\n", _atRxBuf);
-        atCmd("AT+COPS=0", "OK", 10000);   /* automatic operator selection */
-        Log(NOTIFY, "Cell: operator search started\n");
+        atCapture("AT+CPIN?", 5000);
+        atCapture("AT+CFUN?", 2000);
+        {
+          uint8_t eps = getEPSReg();
+          if (eps != 1 && eps != 5) {
+            /* Only trigger auto-scan if not already registered.
+               Sending COPS=0 while registered deregisters first, causing a
+               fresh scan that restarts the clock every recovery cycle. */
+            atCmd("AT+COPS=0", "OK", 10000);
+            Log(NOTIFY, "Cell: operator search started\n");
+          } else {
+            Log(NOTIFY, "Cell: already registered (CEREG=%d) -- skip COPS=0\n", eps);
+          }
+        }
         retries = 0;
         state   = CS_WAIT_REG;
         break;
@@ -696,9 +766,9 @@ static void cellTask_full(void*) {
         if (retries % 10 == 0) {
           Log(NOTIFY, "Cell: CEREG=%d  CSQ=%d  RSSI=%s  (attempt %d/45)\n",
               eps, csq, csq == 99 ? "no signal" : String((int)_rssi).c_str(), retries + 1);
-          if (atCapture("AT+CFUN?", 2000)) Log(LOG, "  %s\n", _atRxBuf);
-          if (atCapture("AT+CPIN?", 2000)) Log(LOG, "  %s\n", _atRxBuf);
-          if (atCapture("AT+COPS?", 3000)) Log(LOG, "  %s\n", _atRxBuf);
+          atCapture("AT+CFUN?", 2000);
+          atCapture("AT+CPIN?", 2000);
+          atCapture("AT+COPS?", 3000);
         } else {
           Log(NOTIFY, "Cell: CEREG=%d  CSQ=%d\n", eps, csq);
         }
@@ -707,7 +777,7 @@ static void cellTask_full(void*) {
           retries = 0;
           state   = CS_ENABLE_GPRS;
         } else if (++retries > 45) {
-          Log(ERROR, "Cell: registration timed out — check antenna\n");
+          Log(ERROR, "Cell: registration timed out -- check antenna\n");
           setStatus("No signal");
           state = CS_ERROR;
         } else {
@@ -764,7 +834,7 @@ static void cellTask_full(void*) {
         } else {
           /* Bearer should have been activated in CS_ENABLE_GPRS.
              If it dropped in the short window since, CS_ERROR will retry. */
-          Log(ERROR, "Cell: bearer not active — retrying\n");
+          Log(ERROR, "Cell: bearer not active -- retrying\n");
           if (++retries > 3) {
             _lteConnected = false;
             setStatus("No network");
@@ -792,46 +862,69 @@ static void cellTask_full(void*) {
       }
 
       case CS_IDLE: {
-        unsigned long nextHeartbeat   = millis() +
-          (unsigned long)GetHeartbeatMins() * 60UL * 1000UL;
-        unsigned long nextBearerCheck = millis() + 60000UL;
-        unsigned long nextGpsPoll     = millis();   /* poll immediately on entry */
+        /* Drain any jobs that arrived since CS_CONNECTED's drain.
+           Without GPS active, power down immediately -- heartbeat fires on
+           every wake cycle (CS_CONNECTED). With GPS active, stay up polling
+           until GPS is disabled, then power down. */
 
-        for (;;) {
-          /* Handle GPSenable() requests from other tasks */
-          if (_gpsEnableRequest) {
-            _gpsEnableRequest = false;
-            if (_gpsEnableValue) gpsStart();
-            else                 gpsStop();
-          }
+        if (_gpsEnableRequest) {
+          _gpsEnableRequest = false;
+          if (_gpsEnableValue) gpsStart();
+          else                 gpsStop();
+        }
 
+        {
           CellJob job;
           while (xQueueReceive(_jobQueue, &job, 0) == pdTRUE) {
             if (job.type == JOB_PUSHOVER) doHTTPPushover(job.title, job.message);
             if (job.type == JOB_SMS)      doSMSSend(job.title, job.message);
           }
+        }
 
-          if ((long)(millis() - nextHeartbeat) >= 0) {
-            sendStatusNotify(false);
-            nextHeartbeat = millis() +
-              (unsigned long)GetHeartbeatMins() * 60UL * 1000UL;
-          }
-
-          if ((long)(millis() - nextBearerCheck) >= 0) {
-            if (!bearerIsActive()) {
-              Log(NOTIFY, "Cell: bearer dropped — reactivating\n");
-              bearerActivate(3);
-            }
-            nextBearerCheck = millis() + 60000UL;
-          }
-
-          if (_gpsEnabled && (long)(millis() - nextGpsPoll) >= 0) {
-            gpsPoll();
-            nextGpsPoll = millis() + 10000UL;   /* poll every 10 s */
-          }
-
+        if (!_gpsEnabled) {
           readCSQ();
-          vTaskDelay(pdMS_TO_TICKS(5000));
+          state = CS_POWER_DOWN;
+          break;
+        }
+
+        /* GPS active -- stay awake: poll GPS, drain jobs, check bearer */
+        {
+          unsigned long nextBearerCheck = millis() + 60000UL;
+          unsigned long nextGpsPoll     = millis();
+
+          for (;;) {
+            if (_gpsEnableRequest) {
+              _gpsEnableRequest = false;
+              if (_gpsEnableValue) gpsStart();
+              else {
+                gpsStop();
+                state = CS_POWER_DOWN;
+                break;
+              }
+            }
+
+            CellJob j;
+            while (xQueueReceive(_jobQueue, &j, 0) == pdTRUE) {
+              if (j.type == JOB_PUSHOVER) doHTTPPushover(j.title, j.message);
+              if (j.type == JOB_SMS)      doSMSSend(j.title, j.message);
+            }
+
+            if ((long)(millis() - nextBearerCheck) >= 0) {
+              if (!bearerIsActive()) {
+                Log(NOTIFY, "Cell: bearer dropped -- reactivating\n");
+                bearerActivate(3);
+              }
+              nextBearerCheck = millis() + 60000UL;
+            }
+
+            if ((long)(millis() - nextGpsPoll) >= 0) {
+              gpsPoll();
+              nextGpsPoll = millis() + 10000UL;
+            }
+
+            readCSQ();
+            vTaskDelay(pdMS_TO_TICKS(5000));
+          }
         }
         break;
       }
@@ -861,17 +954,17 @@ static void cellTask_full(void*) {
             vTaskDelay(pdMS_TO_TICKS(200));
           }
           if (!strstr(buf, "DOWN")) {
-            Log(ERROR, "Cell: no AT confirmation — PWRKEY force off\n");
+            /* CPOWD didn't respond -- modem still on, PWRKEY to force off */
+            Log(ERROR, "Cell: no DOWN -- PWRKEY force off\n");
             digitalWrite(FONA_PWRKEY, LOW);
-            vTaskDelay(pdMS_TO_TICKS(2500));
+            vTaskDelay(pdMS_TO_TICKS(1200));
             digitalWrite(FONA_PWRKEY, HIGH);
             vTaskDelay(pdMS_TO_TICKS(1000));
           }
         }
-        vTaskDelay(pdMS_TO_TICKS(500));
         _lteOn = false;
         setStatus("Sleeping");
-        Log(NOTIFY, "Cell: modem off — sleeping %u min\n", GetHeartbeatMins());
+        Log(NOTIFY, "Cell: modem off -- sleeping %u min\n", GetHeartbeatMins());
         state = CS_SLEEP_WAIT;
         break;
       }
@@ -906,13 +999,13 @@ static void cellTask_full(void*) {
         _gpsFix       = false;
         bootFailCount++;
         if (bootFailCount >= 6) {
-          Log(ERROR, "Cell: %d boot failures — sleeping\n", bootFailCount);
+          Log(ERROR, "Cell: %d boot failures -- sleeping\n", bootFailCount);
           setStatus("Boot failed");
           bootFailCount = 0;
           retries = 0;
           state   = CS_SLEEP_WAIT;
         } else if (bootFailCount == 3) {
-          Log(ERROR, "Cell: 3 failures — PWRKEY modem reset (attempt %d/6)\n", bootFailCount);
+          Log(ERROR, "Cell: 3 failures -- PWRKEY modem reset (attempt %d/6)\n", bootFailCount);
           setStatus("Modem reset");
           digitalWrite(FONA_PWRKEY, LOW);
           vTaskDelay(pdMS_TO_TICKS(1500));
@@ -921,7 +1014,7 @@ static void cellTask_full(void*) {
           retries = 0;
           state   = CS_BOOT;
         } else {
-          Log(ERROR, "Cell: error (attempt %d/6) — retry in 60s\n", bootFailCount);
+          Log(ERROR, "Cell: error (attempt %d/6) -- retry in 60s\n", bootFailCount);
           setStatus("Error");
           vTaskDelay(pdMS_TO_TICKS(60000));
           retries = 0;
@@ -943,7 +1036,7 @@ void CellTaskStart() {
   extern String GetUniqueName();
   strlcpy(_deviceName, GetUniqueName().c_str(), sizeof(_deviceName));
   xTaskCreatePinnedToCore(cellTask, "cell", 8192, NULL, 1, NULL, 0);
-  Log(NOTIFY, "Cell task started on core 0 — device: %s\n", _deviceName);
+  Log(NOTIFY, "Cell task started on core 0 -- device: %s\n", _deviceName);
 }
 
 bool Pushover(const char* title, const char* message) {
@@ -986,7 +1079,7 @@ String CellSIMString() {
   return s;
 }
 
-String CellSigString()     { return String(_rssi); }
+String CellSigString()     { return String((int)_rssi); }
 String CellNetworkString() { return "hologram"; }
 String CellIPString()      { return "N/A"; }
 
