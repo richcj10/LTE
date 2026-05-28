@@ -57,7 +57,8 @@ static bool             _radioRestarted = false;
 static bool             _firstConnect   = true;
 static volatile bool    _wakeRequested  = false;
 static char             _deviceName[24] = "LTE-Device";
-static volatile bool    _lteOn          = false;
+static volatile bool     _lteOn          = false;
+static volatile uint32_t _nextHbSecs    = 0;   /* seconds until next heartbeat; 0 = active/unknown */
 static volatile bool    _lteConnected   = false;
 static volatile int8_t  _rssi           = 0;
 static volatile uint8_t _lteStatus      = 0;
@@ -692,6 +693,17 @@ static void cellTask_full(void*) {
         break;
 
       case CS_INIT:
+        /* Baud negotiation: modem stores AT+IPR in flash but may be at 115200
+           if it just woke from PWRKEY and IPR=230400 was never saved yet. */
+        if (!atCmd("AT", "OK", 500)) {
+          Serial1.begin(115200, SERIAL_8N1, RXD2, TXD2);
+          if (atCmd("AT", "OK", 1000)) {
+            Log(NOTIFY, "Cell: modem at 115200 -- upgrading to 230400\n");
+            atCmd("AT+IPR=230400", "OK", 2000);
+            vTaskDelay(pdMS_TO_TICKS(50));
+          }
+          Serial1.begin(230400, SERIAL_8N1, RXD2, TXD2);
+        }
         if (fona.begin(Serial1)) {
           Log(NOTIFY, "Cell: modem OK\n");
           _lteOn = true;
@@ -798,30 +810,11 @@ static void cellTask_full(void*) {
         break;
       }
 
-      case CS_CHECK_SIM: {
-        char ccid[32] = {0};
-        bool simOk = false;
-        for (uint8_t i = 0; i < 5; i++) {
-          int len = fona.getSIMCCID(ccid);
-          Log(LOG, "Cell: CCID attempt %d len=%d val=%s\n", i + 1, len, ccid);
-          if (len > 0 && strncmp(ccid, "ERROR", 5) != 0) {
-            ccid[len] = '\0';
-            xSemaphoreTake(_mutex, portMAX_DELAY);
-            strlcpy(_simCCID, ccid, sizeof(_simCCID));
-            xSemaphoreGive(_mutex);
-            Log(NOTIFY, "SIM CCID: %s\n", ccid);
-            simOk = true;
-            break;
-          }
-          vTaskDelay(pdMS_TO_TICKS(1000));
-        }
-        if (!simOk) Log(ERROR, "SIM CCID: not ready after 5 attempts\n");
-        Log(NOTIFY, "Cell: pre-connect diagnostics\n");
+      case CS_CHECK_SIM:
         logModemDiag();
         retries = 0;
         state   = CS_CONNECTING;
         break;
-      }
 
       case CS_CONNECTING: {
         if (bearerIsActive()) {
@@ -974,6 +967,7 @@ static void cellTask_full(void*) {
         Log(NOTIFY, "Cell: sleeping %u min\n", GetHeartbeatMins());
         unsigned long elapsed = 0;
         while (elapsed < sleepMs) {
+          _nextHbSecs = (sleepMs - elapsed) / 1000UL;
           if (_wakeRequested) {
             Log(NOTIFY, "Cell: on-demand wake (pending notification)\n");
             break;
@@ -983,6 +977,7 @@ static void cellTask_full(void*) {
           vTaskDelay(pdMS_TO_TICKS(chunk));
           elapsed += chunk;
         }
+        _nextHbSecs = 0;
         if (elapsed >= sleepMs)
           Log(NOTIFY, "Cell: scheduled wake after %u min\n", GetHeartbeatMins());
         retries = 0;
@@ -1032,7 +1027,7 @@ void CellTaskStart() {
   _mutex    = xSemaphoreCreateMutex();
   _jobQueue = xQueueCreate(JOB_QUEUE_LEN, sizeof(CellJob));
   Serial1.setRxBufferSize(1024);
-  Serial1.begin(115200, SERIAL_8N1, RXD2, TXD2);
+  Serial1.begin(230400, SERIAL_8N1, RXD2, TXD2);
   extern String GetUniqueName();
   strlcpy(_deviceName, GetUniqueName().c_str(), sizeof(_deviceName));
   xTaskCreatePinnedToCore(cellTask, "cell", 8192, NULL, 1, NULL, 0);
@@ -1079,7 +1074,8 @@ String CellSIMString() {
   return s;
 }
 
-String CellSigString()     { return String((int)_rssi); }
+String   CellSigString()        { return String((int)_rssi); }
+uint32_t CellNextHeartbeatSecs(){ return _nextHbSecs; }
 String CellNetworkString() { return "hologram"; }
 String CellIPString()      { return "N/A"; }
 

@@ -64,6 +64,7 @@
         <div class="stat"><div class="stat-label">IP</div><div class="stat-val" id="s-ip">—</div></div>
         <div class="stat"><div class="stat-label">MAC</div><div class="stat-val" id="s-mac">—</div></div>
         <div class="stat"><div class="stat-label">WiFi RSSI</div><div class="stat-val" id="s-wrssi">—</div></div>
+        <div class="stat"><div class="stat-label">HB In</div><div class="stat-val" id="s-hbin">—</div></div>
       </div>
 
       <div class="card">
@@ -504,6 +505,9 @@ function loadStatus() {
     setStatus('s-mqtt-badge', d.mqtt);
     setStatus('s-cell-badge', d.cell);
     badge('s-gps-badge', d.gfix ? 'Fix' : 'No Fix', d.gfix ? 'badge-green' : 'badge-red');
+    var hb = d.hbsecs || 0;
+    document.getElementById('s-hbin').innerText =
+      hb > 0 ? (Math.floor(hb/60) + 'm ' + (hb%60) + 's') : 'Active';
   }).catch(function() {});
 }
 

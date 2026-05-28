@@ -38,6 +38,9 @@ void   CellularDisplay();
 bool   SendTextMsg(const char* number, const char* message);
 
 /* Last Pushover result — titleOut[48], statusOut[40] */
-void   CellLastPushover(char* titleOut, bool* okOut, char* statusOut);
+void     CellLastPushover(char* titleOut, bool* okOut, char* statusOut);
+
+/* Seconds until next scheduled heartbeat; 0 = modem active / not sleeping */
+uint32_t CellNextHeartbeatSecs();
 
 #endif
