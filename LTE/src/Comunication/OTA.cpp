@@ -1,3 +1,10 @@
+/**
+ * @file OTA.cpp
+ * @brief ArduinoOTA handler — WiFi-only firmware updates.
+ *
+ * The OTA hostname is set to the device unique name so it appears in
+ * PlatformIO's upload target list.  No bootloader-over-RS-485 path exists.
+ */
 #include "OTA.h"
 #include <ArduinoOTA.h>
 #include "Hardware/Log.h"
@@ -7,6 +14,13 @@
 
 static bool _otaActive = false;
 
+/**
+ * @brief Configure ArduinoOTA callbacks and start the OTA service.
+ *
+ * On start: sets @c _otaActive and switches the LED to solid amber.
+ * On progress: logs percentage at DEBUG level.
+ * On error: logs the error type and clears @c _otaActive.
+ */
 void OTAsetup() {
     String hn = GetUniqueName(); hn.replace(":", "");
     ArduinoOTA.setHostname(hn.c_str());
@@ -42,8 +56,10 @@ void OTAsetup() {
     Log(NOTIFY, "OTA ready on host: %s\n", hn.c_str());
 }
 
+/** @brief Service pending OTA events — call from the main loop. */
 void OTAloop() {
     ArduinoOTA.handle();
 }
 
+/** @return @c true while a firmware upload is in progress. */
 bool OTAactive() { return _otaActive; }

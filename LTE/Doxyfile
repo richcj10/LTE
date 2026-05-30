@@ -1,0 +1,30 @@
+PROJECT_NAME           = "LTE Cellular Monitor"
+PROJECT_BRIEF          = "ESP32 + SIM7070G LTE Cat-M1/NB-IoT cellular node — Pushover, SMS, GPS, RS-485 Modbus slave, MQTT"
+PROJECT_VERSION        = "1.0"
+OUTPUT_DIRECTORY       = docs
+
+INPUT                  = src lib
+RECURSIVE              = YES
+
+FILE_PATTERNS          = *.cpp *.h
+EXCLUDE_PATTERNS       = */.pio/* */.git/* */test/*
+
+EXTRACT_ALL            = YES
+EXTRACT_STATIC         = YES
+EXTRACT_PRIVATE        = NO
+
+SOURCE_BROWSER         = YES
+INLINE_SOURCES         = NO
+STRIP_CODE_COMMENTS    = NO
+
+GENERATE_HTML          = YES
+HTML_OUTPUT            = html
+GENERATE_LATEX         = NO
+
+HAVE_DOT               = NO
+CALL_GRAPH             = NO
+CALLER_GRAPH           = NO
+
+WARN_IF_UNDOCUMENTED   = NO
+QUIET                  = NO
+FULL_PATH_NAMES        = NO
