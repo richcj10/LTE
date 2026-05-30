@@ -1,8 +1,0 @@
-{
-  "MQTTEnabble": 1,
-  "MQTTIP": "192.168.X.X",
-  "MQTTPort": 1883,
-  "MQTTUser": "ESPPLCCell",
-  "MQTTPassword": "**REDACTED-MQTT-PASS**",
-  "MQTTPasswordLN": 10
-}
