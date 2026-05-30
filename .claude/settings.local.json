@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(pip install *)",
+      "PowerShell(cd \"C:\\\\Repo\\\\-ESP32PLC\"; git log --all -p | Select-String -Pattern '\\(?i\\)\\(ssid|password|passwd|passphrase|token|userkey|pushover|hologram|apn|ESPPLCpswd|LoveShack|JohnsonCamper|Lights\\\\.Camera|RR58fa|EnovateEng|WirelessENG|JWM-SD|SDWifi\\)' | ForEach-Object { $_.Line.Trim\\(\\) } | Sort-Object -Unique)"
+    ]
+  }
+}

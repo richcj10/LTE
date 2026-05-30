@@ -1,0 +1,14 @@
+JohnsonCamper-2.4G==>**REDACTED-SSID**
+LoveShack0nWheels==>**REDACTED-PASS**
+Lights.Camera.Action==>**REDACTED-SSID**
+RR58fa!8==>**REDACTED-PASS**
+EnovateEng==>**REDACTED-SSID**
+WirelessENG4u==>**REDACTED-PASS**
+JWM-SD==>**REDACTED-SSID**
+SDWifiPswrd18==>**REDACTED-PASS**
+ax54xhwax8om6q4hwtjxfa7qatanjc==>**REDACTED-PUSHOVER-TOKEN**
+ufi8weo5covwibzqg1a6iuzhpj1r3q==>**REDACTED-PUSHOVER-USERKEY**
+ESPPLCpswd==>**REDACTED-MQTT-PASS**
+192.168.5.10==>192.168.X.X
+192.168.10.101==>192.168.X.X
+192.168.5.156==>192.168.X.X
